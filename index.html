@@ -10,13 +10,14 @@
         .header { text-align: center; color: #2e7d32; margin-bottom: 20px; }
         .saldo-box { background: #2e7d32; color: white; padding: 20px; text-align: center; border-radius: 10px; margin-bottom: 20px; }
         .btn-group { display: flex; gap: 10px; margin-bottom: 20px; }
-        .btn { flex: 1; padding: 15px 10px; font-weight: bold; cursor: pointer; border: none; border-radius: 8px; color: white; text-align: center; font-size: 14px; }
+        .btn { flex: 1; padding: 15px 10px; font-weight: bold; cursor: pointer; border: none; border-radius: 8px; color: white; text-align: center; font-size: 14px; transition: 0.2s; }
+        .btn:active { transform: scale(0.95); }
         .btn-setor { background-color: #4caf50; }
         .btn-tarik { background-color: #f44336; }
         .btn-trf { background-color: #008cba; }
         .history { border-top: 2px solid #eee; padding-top: 15px; }
         .history h3 { font-size: 16px; margin-bottom: 10px; color: #333; }
-        .log-item { display: flex; justify-content: space-between; padding: 8px 5px; border-bottom: 1px solid #f1f1f1; font-size: 14px; }
+        .log-item { display: flex; justify-content: space-between; padding: 10px 5px; border-bottom: 1px solid #f1f1f1; font-size: 14px; }
     </style>
 </head>
 <body>
@@ -24,22 +25,24 @@
 <div class="box">
     <div class="header">
         <h2>🌱 Tabungan Anak</h2>
-        <small>Aplikasi Celengan</small>
+        <small>Aplikasi Celengan Mandiri & Edukatif</small>
     </div>
 
+    <!-- Tampilan Utama Saldo -->
     <div class="saldo-box">
-        <div style="font-size: 14px; opacity: 0.9;">SALDO MURNI</div>
+        <div style="font-size: 14px; opacity: 0.9;">SALDO</div>
         <div style="font-size: 32px; font-weight: bold; margin: 5px 0;" id="v-saldo">Rp 0</div>
         <div style="font-size: 12px; background: rgba(0,0,0,0.2); display:inline-block; padding: 3px 10px; border-radius: 10px;">Akad: Wadiah (Titipan Murni)</div>
     </div>
 
-    <!-- Tombol Menggunakan Aksi Pop-up Langsung -->
+    <!-- Tombol Menu Utama untuk Anak -->
     <div class="btn-group">
-        <button class="btn btn-setor" onclick="aksiMenu('setor')">➕ Setor Tunai</button>
-        <button class="btn btn-tarik" onclick="aksiMenu('tarik')">➖ Tarik Tunai</button>
-        <button class="btn btn-trf" onclick="aksiMenu('transfer')">➔ Transfer</button>
+        <button class="btn btn-setor" onclick="mulaiTransaksi('setor')">➕ Setor Tunai</button>
+        <button class="btn btn-tarik" onclick="mulaiTransaksi('tarik')">➖ Tarik Tunai</button>
+        <button class="btn btn-trf" onclick="mulaiTransaksi('transfer')">➔ Transfer</button>
     </div>
 
+    <!-- Buku Catatan Mutasi -->
     <div class="history">
         <h3>📜 Buku Catatan Mutasi</h3>
         <div id="log-list"></div>
@@ -50,47 +53,66 @@
 <script>
     let dbSaldo = parseInt(localStorage.getItem('db_saldo')) || 0;
     let dbLog = JSON.parse(localStorage.getItem('db_log')) || [];
+    
+    // PIN OORTU bawaan Anda saat ini
     const PIN_ORTU = "12345678"; 
 
-    // Muat data layar utama
+    // Tampilkan data mutasi saat pertama kali dibuka
     renderLayar();
 
-    function aksiMenu(pilihan) {
-        // 1. Validasi PIN Ortu di awal menggunakan Pop-up Windows
-        let pinUser = prompt("🔑 MASUKKAN PIN SERVER INDUK (ORTU):");
-        if (pinUser === null) return; // Jika klik batal
-        if (pinUser !== PIN_ORTU) {
-            alert("⚠️ PIN Salah! Akses ditolak oleh Server Induk.");
-            return;
-        }
+    function mulaiTransaksi(pilihan) {
+        let labelMenu = pilihan === 'setor' ? 'SETORAN DANA' : (pilihan === 'tarik' ? 'PENARIKAN DANA' : 'TRANSFER DANA');
 
-        // 2. Tanya Nominal Uang
-        let inputUang = prompt("💰 Masukkan Jumlah Uang (Rp):\n(Masukkan angka saja tanpa titik/koma)");
-        if (inputUang === null) return;
+        // LANGKAH 1: Anak mengisi Jumlah Uang
+        let inputUang = prompt(`👦 ZONA ANAK - [${labelMenu}]\n\nMasukkan Jumlah Uang (Rp):\n(Ketik angka saja, contoh: 5000)`);
+        if (inputUang === null) return; // Batal jika klik cancel
+        
         let nominal = parseInt(inputUang);
         if (!nominal || nominal <= 0) {
-            alert("⚠️ Nominal uang tidak valid!");
+            alert("⚠️ Nilai uang tidak benar! Ulangi transaksi.");
             return;
         }
 
-        // 3. Tanya Keterangan Tambahan / Tujuan Transfer
+        // Cek dulu kecukupan saldo jika mau mengambil atau transfer uang
+        if ((pilihan === 'tarik' || pilihan === 'transfer') && nominal > dbSaldo) {
+            alert("⚠️ Saldo tabunganmu tidak mencukupi untuk transaksi ini!");
+            return;
+        }
+
         let tujuan = "";
-        let keterangan = "";
+        // LANGKAH 2 (Khusus Transfer): Anak mengisi nama penerima uang
         if (pilihan === 'transfer') {
-            tujuan = prompt("💸 Transfer Ke Siapa? (Nama Penerima):");
-            if (tujuan === null || tujuan.trim() === "") return;
+            tujuan = prompt("👦 ZONA ANAK - [TRANSFER]\n\nKirim uang ini kepada siapa?\n(Ketik Nama Kakak / Adek / Teman):");
+            if (tujuan === null) return;
+            if (tujuan.trim() === "") {
+                alert("⚠️ Nama penerima transfer tidak boleh kosong.");
+                return;
+            }
+        }
+
+        // LANGKAH 3: Anak belajar menulis Alasan / Keterangan
+        let keterangan = prompt(`👦 ZONA ANAK - [${labelMenu}]\n\nTuliskan alasan atau keterangan transaksi ini:\n(Contoh: Sisa uang jajan hari ini / Beli buku)`);
+        if (keterangan === null) return;
+        if (keterangan.trim() === "") keterangan = "Tanpa keterangan tambahan";
+
+        // LANGKAH 4: Konfirmasi Fisik Penyerahan Uang & Validasi PIN Server Induk (Orang Tua)
+        let instruksiOrtu = pilihan === 'setor' 
+            ? `Panggil Ayah/Bunda, serahkan uang fisiknya sebesar Rp ${nominal.toLocaleString('id-ID')}.\n\n🧕 SERVER INDUK - MASUKKAN PIN ORTU:` 
+            : `Panggil Ayah/Bunda untuk mengambil uang fisik sebesar Rp ${nominal.toLocaleString('id-ID')}.\n\n🧕 SERVER INDUK - MASUKKAN PIN ORTU:`;
+
+        let pinUser = prompt(instruksiOrtu);
+        
+        if (pinUser === null) {
+            alert("❌ Transaksi dibatalkan oleh Orang Tua.");
+            return;
         }
         
-        keterangan = prompt("📝 Tulis Keterangan / Catatan Singkat:", "Sisa uang saku");
-        if (keterangan === null) keterangan = "-";
-
-        // 4. Cek kecukupan saldo jika melakukan penarikan/transfer
-        if ((pilihan === 'tarik' || pilihan === 'transfer') && nominal > dbSaldo) {
-            alert("⚠️ Transaksi Gagal! Saldo tabungan anak tidak mencukupi.");
+        if (pinUser !== PIN_ORTU) {
+            alert("⚠️ PIN Server Induk Salah! Uang tidak masuk ke sistem celengan.");
             return;
         }
 
-        // 5. Eksekusi Aritmatika
+        // LANGKAH 5: Proses Aritmatika Saldo
         let pesanLog = "";
         if (pilihan === 'setor') {
             dbSaldo += nominal;
@@ -103,15 +125,16 @@
             pesanLog = `Trf ke ${tujuan}: ` + keterangan;
         }
 
-        // 6. Simpan Riwayat Permanen ke Browser
+        // LANGKAH 6: Rekam Waktu Real-time & Update Storage Browser
         let tgl = new Date().toLocaleDateString('id-ID') + " " + new Date().toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
         dbLog.unshift({ aksi: pilihan, uang: nominal, detail: pesanLog, waktu: tgl });
 
         localStorage.setItem('db_saldo', dbSaldo);
         localStorage.setItem('db_log', JSON.stringify(dbLog));
 
+        // Perbarui Tampilan Utama
         renderLayar();
-        alert("✅ BERHASIL! Server induk sukses memperbarui saldo anak.");
+        alert(`✅ VALIDASI SUKSES!\nSaldo baru telah tercatat di server induk.`);
     }
 
     function renderLayar() {
@@ -142,7 +165,7 @@
             dbSaldo = 0;
             dbLog = [];
             renderLayar();
-            alert("Sistem berhasil di-reset.");
+            alert("Seluruh data pembukuan berhasil dikosongkan.");
         } else if (pinUser !== null) {
             alert("PIN Salah!");
         }
