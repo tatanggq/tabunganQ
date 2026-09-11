@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tabungan Syariah Anak</title>
+    <title>Tabungan Anak</title>
     <style>
         body { font-family: sans-serif; background-color: #f0f2f5; padding: 20px; display: flex; justify-content: center; }
         .box { width: 100%; max-width: 450px; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
@@ -28,12 +28,12 @@
 
 <div class="box">
     <div class="header">
-        <h2>🌱 Tabungan Syariah Anak</h2>
-        <small>Aplikasi Celengan Server Induk Ortu</small>
+        <h2>🌱 Tabungan Anak</h2>
+        <small>Aplikasi Celengan</small>
     </div>
 
     <div class="saldo-box">
-        <div style="font-size: 14px; opacity: 0.9;">SALDO ANDA</div>
+        <div style="font-size: 14px; opacity: 0.9;">SALDO</div>
         <div style="font-size: 32px; font-weight: bold; margin: 5px 0;" id="v-saldo">Rp 0</div>
         <div style="font-size: 12px; background: rgba(0,0,0,0.2); display:inline-block; padding: 3px 10px; border-radius: 10px;">Akad: Wadiah (Titipan Murni)</div>
     </div>
@@ -85,7 +85,7 @@
     let dbSaldo = parseInt(localStorage.getItem('db_saldo')) || 0;
     let dbLog = JSON.parse(localStorage.getItem('db_log')) || [];
     let menuAktif = "";
-    const PIN_ORTU = "1234"; // Ganti PIN Anda di sini jika mau
+    const PIN_ORTU = "12345678"; // Ganti PIN Anda di sini jika mau
 
     // Tampilkan data awal saat halaman selesai dimuat
     renderLayar();
@@ -118,11 +118,11 @@
 
     function prosesData() {
         let nominal = parseInt(document.getElementById('in-jumlah').value);
-        let keterangan = document.getElementById('in-ket').value || 'Tanpa catatan';
+        let keterangan = document.getElementById('in-ket').value || '-';
         let tujuan = document.getElementById('in-tujuan').value;
         let pinUser = document.getElementById('in-pin').value;
 
-        if(!nominal || nominal <= 0) {
+        if(!nominal || nominal <= 0.000) {
             alert("Harap masukkan nominal uang yang valid!");
             return;
         }
@@ -188,6 +188,12 @@
             dbLog = [];
             renderLayar();
             tutupForm();
+            <script>
+    // Database Sederhana di Browser
+    let dbSaldo = parseInt(localStorage.getItem('db_saldo')) || 0;
+    let dbLog = JSON.parse(localStorage.getItem('db_log')) || [];
+    let menuAktif = "";
+    const PIN_ORTU = "12345678"; // Ganti PIN Anda di sini jika mau
         }
     }
 </script>
