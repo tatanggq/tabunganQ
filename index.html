@@ -5,183 +5,162 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tabungan Anak</title>
     <style>
-        :root {
-            --primary: #2e7d32;
-            --primary-light: #e8f5e9;
-            --secondary: #00796b;
-            --dark: #212121;
-            --light: #eef2f3;
-            --danger: #d32f2f;
-        }
-        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
-        body { background-color: var(--light); color: var(--dark); padding: 20px; display: flex; justify-content: center; }
-        .container { width: 100%; max-width: 500px; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
-        h1 { color: var(--primary); text-align: center; font-size: 24px; margin-bottom: 5px; }
-        .subtitle { text-align: center; font-size: 12px; color: #666; margin-bottom: 25px; }
-        
-        .balance-card { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; padding: 25px; border-radius: 16px; text-align: center; margin-bottom: 25px; box-shadow: 0 5px 15px rgba(46, 125, 50, 0.3); }
-        .balance-card h3 { opacity: 0.9; font-size: 13px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 5px; }
-        .balance-amount { font-size: 34px; font-weight: 700; margin-bottom: 10px; }
-        .akad-badge { display: inline-block; background: rgba(255,255,255,0.2); padding: 6px 16px; border-radius: 20px; font-size: 12px; }
-
-        .menu-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 25px; }
-        .menu-btn { background: var(--primary-light); border: none; padding: 15px 10px; border-radius: 12px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 8px; font-weight: bold; color: var(--primary); font-size: 13px; transition: 0.2s; }
-        .menu-btn:hover { background: #c8e6c9; transform: translateY(-2px); }
-        .menu-btn svg { width: 24px; height: 24px; fill: var(--primary); }
-
-        .modal { display: none; background: #fff; border: 2px solid var(--primary); padding: 20px; border-radius: 16px; margin-bottom: 25px; animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-        .modal h3 { font-size: 16px; margin-bottom: 15px; border-bottom: 2px solid var(--primary-light); padding-bottom: 5px; }
-
+        :root { --p: #2e7d32; --p-l: #e8f5e9; --s: #00796b; --d: #212121; --l: #eef2f3; }
+        * { box-sizing: border-box; font-family: sans-serif; margin: 0; padding: 0; }
+        body { background-color: var(--l); color: var(--d); padding: 20px; display: flex; justify-content: center; }
+        .box { width: 100%; max-width: 480px; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
+        .card { background: linear-gradient(135deg, var(--p), var(--s)); color: white; padding: 25px; border-radius: 16px; text-align: center; margin-bottom: 25px; }
+        .grid { display: flex; gap: 10px; margin-bottom: 25px; }
+        .btn { flex: 1; background: var(--p-l); border: none; padding: 15px; border-radius: 12px; cursor: pointer; font-weight: bold; color: var(--p); text-align: center; font-size: 14px; }
+        .btn:hover { background: #c8e6c9; }
+        .modal { display: none; background: #fff; border: 2px solid var(--p); padding: 20px; border-radius: 16px; margin-bottom: 25px; }
         .form-group { margin-bottom: 12px; }
         label { display: block; margin-bottom: 5px; font-size: 13px; font-weight: 600; }
-        input, select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; outline: none; }
-        input:focus { border-color: var(--primary); }
-        
-        .btn-submit { width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 5px; }
-        .btn-submit:hover { background: var(--secondary); }
-        .btn-cancel { background: #e0e0e0; color: #333; margin-top: 8px; width: 100%; padding: 8px; border: none; border-radius: 8px; cursor: pointer; }
-
-        .history-section h3 { font-size: 16px; margin-bottom: 10px; color: #444; text-align: left; }
-        .history-list { list-style: none; max-height: 200px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; padding: 5px; }
-        .history-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 10px; border-bottom: 1px solid #f5f5f5; font-size: 14px; }
-        .history-item:last-child { border-bottom: none; }
-        .history-item .details { display: flex; flex-direction: column; }
-        .history-item .date { color: #999; font-size: 11px; margin-top: 2px; }
-        
-        .amt-in { color: #2e7d32; font-weight: bold; }
-        .amt-out { color: #d32f2f; font-weight: bold; }
-
-        .admin-trigger { text-align: center; margin-top: 20px; }
-        .admin-link { font-size: 12px; color: #757575; cursor: pointer; text-decoration: underline; }
+        input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; outline: none; }
+        .btn-sub { width: 100%; padding: 12px; background: var(--p); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .history { list-style: none; max-height: 200px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; padding: 5px; }
+        .item { display: flex; justify-content: space-between; padding: 12px 10px; border-bottom: 1px solid #f5f5f5; font-size: 14px; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>🌱 Tabungan Anak</h1>
-    <p class="subtitle">Aplikasi Celengan Pintar</p>
+<div class="box">
+    <h2 style="text-align:center; color:var(--p);">🌱 Tabungan Anak</h2>
+    <p style="text-align:center; font-size:12px; color:#666; margin-bottom:20px;">Aplikasi Celengan Interaktif</p>
 
-    <!-- Info Utama Saldo -->
-    <div class="balance-card">
-        <h3>Saldo Anda</h3>
-        <div class="balance-amount" id="total-saldo">Rp 0</div>
-        <div class="akad-badge">Akad: <span id="current-akad">Wadiah (Titipan)</span></div>
+    <div class="card">
+        <h3 style="font-size:13px; opacity:0.9;">SALDO ANDA</h3>
+        <div style="font-size:34px; font-weight:700; margin: 5px 0;" id="v-saldo">Rp 0</div>
+        <div style="font-size:12px; background:rgba(255,255,255,0.2); display:inline-block; padding:4px 12px; border-radius:20px;">Akad: Wadiah (Titipan)</div>
     </div>
 
-    <!-- 3 Tombol Utama Sesuai Request -->
-    <div class="menu-grid">
-        <button class="menu-btn" id="btn-setor">
-            <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-            Setor Tunai
-        </button>
-        <button class="menu-btn" id="btn-tarik">
-            <svg viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z"/></svg>
-            Tarik Tunai
-        </button>
-        <button class="menu-btn" id="btn-transfer">
-            <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-            Transfer
-        </button>
+    <!-- Tombol Menu Menggunakan Fungsi Onclick Langsung -->
+    <div class="grid">
+        <button class="btn" onclick="bukaForm('setor')">➕ Setor Tunai</button>
+        <button class="btn" onclick="bukaForm('tarik')">➖ Tarik Tunai</button>
+        <button class="btn" onclick="bukaForm('transfer')">➔ Transfer</button>
     </div>
 
-    <!-- PANEL AKSI TRANSAKSI - ANAK MENGISI DATA DI SINI -->
-    <div class="modal" id="tx-modal">
-        <h3 id="modal-title">Form Transaksi</h3>
+    <!-- Halaman Pengisian Mandiri untuk Anak -->
+    <div class="modal" id="panel-form">
+        <h3 id="form-title" style="margin-bottom:15px; border-bottom:2px solid var(--p-l); padding-bottom:5px;">Form</h3>
         <div class="form-group">
             <label>👦 Jumlah Uang yang Diinput Anak (Rp):</label>
-            <input type="number" id="form-amount" placeholder="Contoh: 1000">
+            <input type="number" id="in-uang" placeholder="Contoh: 1000">
         </div>
-        <div class="form-group" id="group-target" style="display:none;">
+        <div class="form-group" id="div-tujuan" style="display:none;">
             <label>👦 Kirim Ke (Nama Penerima):</label>
-            <input type="text" id="form-target" placeholder="Contoh: Kakak / Adek">
+            <input type="text" id="in-tujuan" placeholder="Contoh: Kakak / Adek">
         </div>
         <div class="form-group">
             <label>👦 Alasan / Keterangan Belajar Nabung:</label>
-            <input type="text" id="form-desc" placeholder="Contoh: Sisa uang saku / Beli mainan">
+            <input type="text" id="in-ket" placeholder="Contoh: Sisa uang saku">
         </div>
-        
-        <button class="btn-submit" id="btn-execute">Konfirmasi Transaksi</button>
-        <button class="btn-cancel" id="btn-close">Batal</button>
+        <button class="btn-sub" onclick="prosesValidasi()">Konfirmasi Transaksi</button>
+        <button style="width:100%; margin-top:8px; background:#e0e0e0; border:none; padding:8px; border-radius:8px; cursor:pointer;" onclick="tutupForm()">Batal</button>
     </div>
 
-    <!-- DAFTAR MUTASI / RIWAYAT -->
-    <div class="history-section">
-        <h3>📜 Buku Mutasi Tabungan</h3>
-        <ul id="history-list" class="history-list">
-            <!-- Isi otomatis -->
-        </ul>
-    </div>
-
-    <!-- PANEL PENGATURAN ORANG TUA -->
-    <div class="admin-trigger">
-        <span class="admin-link" id="btn-admin-panel">⚙️ Pengaturan Server Orangtua (Ubah Akad/Reset)</span>
-    </div>
-
-    <div class="modal" id="admin-modal" style="margin-top: 15px;">
-        <h3>⚙️ Kontrol Server Orangtua</h3>
-        <div class="form-group">
-            <label>Pilih Jenis Akad Utama Anak:</label>
-            <select id="akad-select">
-                <option value="Wadiah (Titipan)">Wadiah (Titipan Murni - Tanpa Janji Imbalan)</option>
-                <option value="Mudharabah (Bagi Hasil)">Mudharabah (Bagi Hasil Kerja / Tugas Rumah)</option>
-            </select>
+    <div>
+        <h3 style="font-size:16px; margin-bottom:10px; color:#444;">📜 Buku Mutasi Tabungan</h3>
+        <ul id="log-list" class="history"></ul>
+        <div style="text-align:center; margin-top:20px;">
+            <span style="font-size:12px; color:#757575; cursor:pointer; text-decoration:underline;" onclick="resetSistem()">⚙️ Reset Total Sistem</span>
         </div>
-        <button class="btn-submit" id="btn-save-akad" style="background: var(--secondary);">Simpan Akad Baru</button>
-        <button class="btn-cancel" id="btn-reset-all" style="background: var(--danger); color: white;">Hapus Seluruh Data</button>
-        <button class="btn-cancel" id="btn-close-admin">Tutup</button>
     </div>
 </div>
 
 <script>
-    // System Data Base terhubung ke LocalStorage Browser
-    let saldo = parseInt(localStorage.getItem('sy_saldo')) || 0;
-    let riwayat = JSON.parse(localStorage.getItem('sy_riwayat')) || [];
-    let akadAktif = localStorage.getItem('sy_akad') || 'Wadiah (Titipan)';
-    
-    // PIN Server Orangtua
-    const PIN_INDUK = "12345678"; 
-    let tipeTransaksiAktif = "";
+    let saldo = parseInt(localStorage.getItem('s_saldo')) || 0;
+    let log = JSON.parse(localStorage.getItem('s_log')) || [];
+    let menu = "";
+    const PIN_ORTU = "12345678"; // PIN Anda selaku server induk
 
-    // DOM Catcher
-    const modal = document.getElementById('tx-modal');
-    const adminModal = document.getElementById('admin-modal');
-    const groupTarget = document.getElementById('group-target');
+    // Muat data saat web dibuka
+    renderLayar();
 
-    document.addEventListener("DOMContentLoaded", () => {
-        updateLayar();
+    function bukaForm(opsi) {
+        menu = opsi;
+        document.getElementById('panel-form').style.display = 'block';
+        document.getElementById('in-uang').value = '';
+        document.getElementById('in-ket').value = '';
+        document.getElementById('in-tujuan').value = '';
 
-        // Trigger Tombol-Tombol Utama
-        document.getElementById('btn-setor').addEventListener('click', () => bukaForm('setor'));
-        document.getElementById('btn-tarik').addEventListener('click', () => bukaForm('tarik'));
-        document.getElementById('btn-transfer').addEventListener('click', () => bukaForm('transfer'));
-        document.getElementById('btn-close').addEventListener('click', () => modal.style.display = 'none');
-        
-        document.getElementById('btn-admin-panel').addEventListener('click', () => {
-            let p = prompt("🧕 SERVER Orangtua - Masukkan PIN Anda:");
-            if(p === PIN_INDUK) adminModal.style.display = 'block';
-            else if(p !== null) alert("PIN Salah!");
+        if(opsi === 'setor') {
+            document.getElementById('form-title').innerText = "💰 Form Setor Tunai Celengan Syariah";
+            document.getElementById('div-tujuan').style.display = 'none';
+        } else if(opsi === 'tarik') {
+            document.getElementById('form-title').innerText = "💵 Form Tarik Tunai Mandiri";
+            document.getElementById('div-tujuan').style.display = 'none';
+        } else if(opsi === 'transfer') {
+            document.getElementById('form-title').innerText = "💸 Form Transfer Dana";
+            document.getElementById('div-tujuan').style.display = 'block';
+        }
+    }
+
+    function tutupForm() {
+        document.getElementById('panel-form').style.display = 'none';
+    }
+
+    function prosesValidasi() {
+        let nominal = parseInt(document.getElementById('in-uang').value);
+        let catatan = document.getElementById('in-ket').value || 'Tanpa keterangan';
+        let target = document.getElementById('in-tujuan').value;
+
+        if(!nominal || nominal <= 0) {
+            alert("Harap masukkan nominal uang yang valid!");
+            return;
+        }
+        if((menu === 'tarik' || menu === 'transfer') && nominal > saldo) {
+            alert("⚠️ Saldo tidak mencukupi untuk melakukan transaksi ini.");
+            return;
+        }
+
+        // PANGGIL ORANG TUA SECARA FISIK MELALUI POP-UP SISTEM
+        let aksiFisik = menu === 'setor' ? 'serahkan uang fisiknya' : 'ambil uang fisiknya';
+        let pin = prompt(`📢 Panggil Ayah/Bunda, ${aksiFisik} sebesar Rp ${nominal.toLocaleString('id-ID')}.\n\n🧕 SERVER INDUK - MASUKKAN PIN ORTU:`);
+
+        if (pin === null) return;
+        if (pin !== PIN_ORTU) {
+            alert("⚠️ PIN Server Induk Salah! Transaksi otomatis dibatalkan.");
+            return;
+        }
+
+        // Jalankan Perhitungan Uang jika PIN Benar
+        let infoLog = catatan;
+        if(menu === 'setor') { saldo += nominal; infoLog = "Setor: " + catatan; }
+        else if(menu === 'tarik') { saldo -= nominal; infoLog = "Tarik: " + catatan; }
+        else if(menu === 'transfer') { saldo -= nominal; infoLog = `Trf ke ${target}: ` + catatan; }
+
+        let tgl = new Date().toLocaleString('id-ID', {dateStyle: 'short', timeStyle: 'short'});
+        log.unshift({ aksi: menu, uang: nominal, detail: infoLog, waktu: tgl });
+
+        localStorage.setItem('s_saldo', saldo);
+        localStorage.setItem('s_log', JSON.stringify(log));
+
+        tutupForm();
+        renderLayar();
+        alert("✅ Transaksi Sukses Diverifikasi Server Induk!");
+    }
+
+    function renderLayar() {
+        document.getElementById('v-saldo').innerText = "Rp " + saldo.toLocaleString('id-ID');
+        let html = "";
+        log.forEach(item => {
+            let isPlus = item.aksi === 'setor';
+            html += `<li class="item">
+                <div><strong>${item.detail}</strong><br><small style="color:#999;">${item.waktu}</small></div>
+                <div style="font-weight:bold; color:${isPlus?'#2e7d32':'#d32f2f'}">${isPlus?'+':'-'} Rp ${item.uang.toLocaleString('id-ID')}</div>
+            </li>`;
         });
-        document.getElementById('btn-close-admin').addEventListener('click', () => adminModal.style.display = 'none');
+        document.getElementById('log-list').innerHTML = html || '<p style="text-align:center; padding:15px; color:#aaa; font-size:13px;">Belum ada riwayat.</p>';
+    }
 
-        document.getElementById('btn-execute').addEventListener('click', eksekusiTransaksi);
-        document.getElementById('btn-save-akad').addEventListener('click', simpanAkad);
-        document.getElementById('btn-reset-all').addEventListener('click', resetTotal);
-    });
-
-    function bukaForm(tipe) {
-        tipeTransaksiAktif = tipe;
-        modal.style.display = 'block';
-        adminModal.style.display = 'none';
-        
-        // Reset isi field agar anak belajar input dari awal
-        document.getElementById('form-amount').value = '';
-        document.getElementById('form-desc').value = '';
-        document.getElementById('form-target').value = '';
-
-        if(tipe === 'setor') {
-            document.getElementById('modal-title').innerText = "💰 Form Setor Tunai Celengan Syariah";
-            groupTarget.style.display = 'none';
-        } else if(tipe === 'tarik') {
-            document.getElementById('modal-title').innerText = "💵 Form Tarik Tunai Mandiri";
-            groupTarget.style.display = 'none';
+    function resetSistem() {
+        let pin = prompt("🧕 SERVER Orangtua - Masukkan PIN Anda:");
+        if (pin === PIN_ORTU) {
+            localStorage.clear(); saldo = 0; log = []; renderLayar(); tutupForm(); alert("Sistem di-reset.");
+        } else if (pin !== null) { alert("PIN Salah!"); }
+    }
+</script>
+</body>
+</html>
