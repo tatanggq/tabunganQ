@@ -62,11 +62,11 @@
     <h1>🌱 Tabungan Anak</h1>
     <p class="subtitle">Aplikasi Celengan Pintar</p>
 
-    <!-- info utama saldo -->
+    <!-- Info Utama Saldo -->
     <div class="balance-card">
         <h3>Saldo Anda</h3>
         <div class="balance-amount" id="total-saldo">Rp 0</div>
-        <div class="akad-badge">Akad: <span id="current-akad">(Titipan)</span></div>
+        <div class="akad-badge">Akad: <span id="current-akad">Wadiah (Titipan)</span></div>
     </div>
 
     <!-- 3 Tombol Utama Sesuai Request -->
@@ -139,7 +139,7 @@
     let riwayat = JSON.parse(localStorage.getItem('sy_riwayat')) || [];
     let akadAktif = localStorage.getItem('sy_akad') || 'Wadiah (Titipan)';
     
-    // PIN Server Induk Anda
+    // PIN Server Orangtua
     const PIN_INDUK = "12345678"; 
     let tipeTransaksiAktif = "";
 
@@ -158,7 +158,7 @@
         document.getElementById('btn-close').addEventListener('click', () => modal.style.display = 'none');
         
         document.getElementById('btn-admin-panel').addEventListener('click', () => {
-            let p = prompt("🧕 SERVER INDUK - Masukkan PIN Anda:");
+            let p = prompt("🧕 SERVER Orangtua - Masukkan PIN Anda:");
             if(p === PIN_INDUK) adminModal.style.display = 'block';
             else if(p !== null) alert("PIN Salah!");
         });
