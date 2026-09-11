@@ -10,15 +10,10 @@
         .header { text-align: center; color: #2e7d32; margin-bottom: 20px; }
         .saldo-box { background: #2e7d32; color: white; padding: 20px; text-align: center; border-radius: 10px; margin-bottom: 20px; }
         .btn-group { display: flex; gap: 10px; margin-bottom: 20px; }
-        .btn { flex: 1; padding: 12px; font-weight: bold; cursor: pointer; border: none; border-radius: 8px; color: white; text-align: center; }
+        .btn { flex: 1; padding: 15px 10px; font-weight: bold; cursor: pointer; border: none; border-radius: 8px; color: white; text-align: center; font-size: 14px; }
         .btn-setor { background-color: #4caf50; }
         .btn-tarik { background-color: #f44336; }
         .btn-trf { background-color: #008cba; }
-        .form-panel { background: #eef2f3; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-        .form-group { margin-bottom: 10px; }
-        .form-group label { display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; }
-        .form-group input { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 5px; }
-        .btn-action { width: 100%; padding: 12px; background: #2e7d32; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
         .history { border-top: 2px solid #eee; padding-top: 15px; }
         .history h3 { font-size: 16px; margin-bottom: 10px; color: #333; }
         .log-item { display: flex; justify-content: space-between; padding: 8px 5px; border-bottom: 1px solid #f1f1f1; font-size: 14px; }
@@ -33,131 +28,90 @@
     </div>
 
     <div class="saldo-box">
-        <div style="font-size: 14px; opacity: 0.9;">SALDO</div>
+        <div style="font-size: 14px; opacity: 0.9;">SALDO MURNI</div>
         <div style="font-size: 32px; font-weight: bold; margin: 5px 0;" id="v-saldo">Rp 0</div>
         <div style="font-size: 12px; background: rgba(0,0,0,0.2); display:inline-block; padding: 3px 10px; border-radius: 10px;">Akad: Wadiah (Titipan Murni)</div>
     </div>
 
-    <!-- Tombol Navigasi Menu Langsung -->
+    <!-- Tombol Menggunakan Aksi Pop-up Langsung -->
     <div class="btn-group">
-        <button class="btn btn-setor" onclick="pilihMenu('setor')">+ Setor</button>
-        <button class="btn btn-tarik" onclick="pilihMenu('tarik')">- Tarik</button>
-        <button class="btn btn-trf" onclick="pilihMenu('transfer')">➔ Transfer</button>
-    </div>
-
-    <!-- Formulir Interaksi Utama -->
-    <div class="form-panel" id="panel-form" style="display: none;">
-        <h3 id="form-title" style="margin-bottom: 10px; font-size: 16px; color: #333;">Form</h3>
-        
-        <div class="form-group">
-            <label>Jumlah Uang (Rp):</label>
-            <input type="number" id="in-jumlah" placeholder="Masukkan angka saja">
-        </div>
-        
-        <div class="form-group" id="group-tujuan" style="display: none;">
-            <label>Kirim Ke (Nama Penerima):</label>
-            <input type="text" id="in-tujuan" placeholder="Contoh: Kakak / Adek">
-        </div>
-
-        <div class="form-group">
-            <label>Keterangan / Alasan:</label>
-            <input type="text" id="in-ket" placeholder="Contoh: Sisa uang jajan">
-        </div>
-
-        <div class="form-group" style="background: #fff3e0; padding: 8px; border-radius: 5px;">
-            <label style="color: #e65100;">🔑 Persetujuan Server (PIN Ortu):</label>
-            <input type="password" id="in-pin" placeholder="Masukkan PIN Ortu untuk validasi">
-        </div>
-
-        <button class="btn-action" onclick="prosesData()">Konfirmasi & Jalankan</button>
-        <button style="width:100%; margin-top:5px; background:#ccc; border:none; padding:5px; cursor:pointer; border-radius:5px;" onclick="tutupForm()">Batal</button>
+        <button class="btn btn-setor" onclick="aksiMenu('setor')">➕ Setor Tunai</button>
+        <button class="btn btn-tarik" onclick="aksiMenu('tarik')">➖ Tarik Tunai</button>
+        <button class="btn btn-trf" onclick="aksiMenu('transfer')">➔ Transfer</button>
     </div>
 
     <div class="history">
         <h3>📜 Buku Catatan Mutasi</h3>
         <div id="log-list"></div>
-        <button onclick="bersihkanSistem()" style="margin-top:20px; background:none; border:none; color:red; text-decoration:underline; cursor:pointer; font-size:11px; width:100%; text-align:center;">Reset Semua Data</button>
+        <button onclick="bersihkanSistem()" style="margin-top:30px; background:none; border:none; color:red; text-decoration:underline; cursor:pointer; font-size:11px; width:100%; text-align:center;">Reset Semua Data</button>
     </div>
 </div>
 
 <script>
-    // Database Sederhana di Browser
     let dbSaldo = parseInt(localStorage.getItem('db_saldo')) || 0;
     let dbLog = JSON.parse(localStorage.getItem('db_log')) || [];
-    let menuAktif = "";
-    const PIN_ORTU = "12345678"; // Ganti PIN Anda di sini jika mau
+    const PIN_ORTU = "12345678"; 
 
-    // Tampilkan data awal saat halaman selesai dimuat
+    // Muat data layar utama
     renderLayar();
 
-    function pilihMenu(pilihan) {
-        menuAktif = pilihan;
-        document.getElementById('panel-form').style.display = 'block';
+    function aksiMenu(pilihan) {
+        // 1. Validasi PIN Ortu di awal menggunakan Pop-up Windows
+        let pinUser = prompt("🔑 MASUKKAN PIN SERVER INDUK (ORTU):");
+        if (pinUser === null) return; // Jika klik batal
+        if (pinUser !== PIN_ORTU) {
+            alert("⚠️ PIN Salah! Akses ditolak oleh Server Induk.");
+            return;
+        }
+
+        // 2. Tanya Nominal Uang
+        let inputUang = prompt("💰 Masukkan Jumlah Uang (Rp):\n(Masukkan angka saja tanpa titik/koma)");
+        if (inputUang === null) return;
+        let nominal = parseInt(inputUang);
+        if (!nominal || nominal <= 0) {
+            alert("⚠️ Nominal uang tidak valid!");
+            return;
+        }
+
+        // 3. Tanya Keterangan Tambahan / Tujuan Transfer
+        let tujuan = "";
+        let keterangan = "";
+        if (pilihan === 'transfer') {
+            tujuan = prompt("💸 Transfer Ke Siapa? (Nama Penerima):");
+            if (tujuan === null || tujuan.trim() === "") return;
+        }
         
-        // Reset kolom inputan
-        document.getElementById('in-jumlah').value = '';
-        document.getElementById('in-ket').value = '';
-        document.getElementById('in-tujuan').value = '';
-        document.getElementById('in-pin').value = '';
+        keterangan = prompt("📝 Tulis Keterangan / Catatan Singkat:", "Sisa uang saku");
+        if (keterangan === null) keterangan = "-";
 
-        if(pilihan === 'setor') {
-            document.getElementById('form-title').innerText = "💰 Setor Tunai Fisik Ke Ortu";
-            document.getElementById('group-tujuan').style.display = 'none';
-        } else if(pilihan === 'tarik') {
-            document.getElementById('form-title').innerText = "💵 Tarik Tunai Mandiri";
-            document.getElementById('group-tujuan').style.display = 'none';
-        } else if(pilihan === 'transfer') {
-            document.getElementById('form-title').innerText = "💸 Transfer Antar Rekening";
-            document.getElementById('group-tujuan').style.display = 'block';
-        }
-    }
-
-    function tutupForm() {
-        document.getElementById('panel-form').style.display = 'none';
-    }
-
-    function prosesData() {
-        let nominal = parseInt(document.getElementById('in-jumlah').value);
-        let keterangan = document.getElementById('in-ket').value || '-';
-        let tujuan = document.getElementById('in-tujuan').value;
-        let pinUser = document.getElementById('in-pin').value;
-
-        if(!nominal || nominal <= 0.000) {
-            alert("Harap masukkan nominal uang yang valid!");
-            return;
-        }
-        if(pinUser !== PIN_ORTU) {
-            alert("PIN Server Salah! Transaksi otomatis dibatalkan.");
-            return;
-        }
-        if((menuAktif === 'tarik' || menuAktif === 'transfer') && nominal > dbSaldo) {
-            alert("Saldo tabungan tidak mencukupi!");
+        // 4. Cek kecukupan saldo jika melakukan penarikan/transfer
+        if ((pilihan === 'tarik' || pilihan === 'transfer') && nominal > dbSaldo) {
+            alert("⚠️ Transaksi Gagal! Saldo tabungan anak tidak mencukupi.");
             return;
         }
 
-        // Hitung aritmatika tabungan
+        // 5. Eksekusi Aritmatika
         let pesanLog = "";
-        if(menuAktif === 'setor') {
+        if (pilihan === 'setor') {
             dbSaldo += nominal;
             pesanLog = "Setor: " + keterangan;
-        } else if(menuAktif === 'tarik') {
+        } else if (pilihan === 'tarik') {
             dbSaldo -= nominal;
             pesanLog = "Tarik: " + keterangan;
-        } else if(menuAktif === 'transfer') {
+        } else if (pilihan === 'transfer') {
             dbSaldo -= nominal;
             pesanLog = `Trf ke ${tujuan}: ` + keterangan;
         }
 
-        // Simpan transaksi
+        // 6. Simpan Riwayat Permanen ke Browser
         let tgl = new Date().toLocaleDateString('id-ID') + " " + new Date().toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
-        dbLog.unshift({ aksi: menuAktif, uang: nominal, detail: pesanLog, waktu: tgl });
+        dbLog.unshift({ aksi: pilihan, uang: nominal, detail: pesanLog, waktu: tgl });
 
         localStorage.setItem('db_saldo', dbSaldo);
         localStorage.setItem('db_log', JSON.stringify(dbLog));
 
-        tutupForm();
         renderLayar();
-        alert("Transaksi Sukses Terverifikasi!");
+        alert("✅ BERHASIL! Server induk sukses memperbarui saldo anak.");
     }
 
     function renderLayar() {
@@ -178,17 +132,19 @@
             </div>`;
         });
         
-        document.getElementById('log-list').innerHTML = kontainerLog || '<p style="color:#aaa; text-align:center; font-size:13px; padding:10px;">Belum ada riwayat.</p>';
+        document.getElementById('log-list').innerHTML = kontainerLog || '<p style="color:#aaa; text-align:center; font-size:13px; padding:10px;">Belum ada riwayat keuangan.</p>';
     }
 
     function bersihkanSistem() {
-        if(confirm("Yakin ingin mengosongkan seluruh pembukuan kembali ke awal?")) {
+        let pinUser = prompt("🔑 Masukkan PIN Ortu untuk menghapus total data:");
+        if (pinUser === PIN_ORTU) {
             localStorage.clear();
             dbSaldo = 0;
             dbLog = [];
             renderLayar();
-            tutupForm();
-            <script>
+            alert("Sistem berhasil di-reset.");
+        } else if (pinUser !== null) {
+            alert("PIN Salah!");
         }
     }
 </script>
