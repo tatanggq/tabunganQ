@@ -34,7 +34,6 @@
         <div style="font-size:12px; background:rgba(255,255,255,0.2); display:inline-block; padding:4px 12px; border-radius:20px;">Akad: Wadiah (Titipan)</div>
     </div>
 
-    <!-- Tombol Menu Menggunakan Fungsi Onclick Langsung -->
     <div class="grid">
         <button class="btn" onclick="bukaForm('setor')">➕ Setor Tunai</button>
         <button class="btn" onclick="bukaForm('tarik')">➖ Tarik Tunai</button>
@@ -54,6 +53,7 @@
         </div>
         <div class="form-group">
             <label>👦 Alasan / Keterangan:</label>
+            <!-- ID in-ket kini contohnya berubah otomatis sesuai pilihan menu -->
             <input type="text" id="in-ket" placeholder="Contoh: Jajan">
         </div>
         <button class="btn-sub" onclick="prosesValidasi()">Konfirmasi Transaksi</button>
@@ -73,27 +73,33 @@
     let saldo = parseInt(localStorage.getItem('s_saldo')) || 0;
     let log = JSON.parse(localStorage.getItem('s_log')) || [];
     let menu = "";
-    const PIN_ORTU = "12345678"; // PIN Anda selaku server orangtua
+    const PIN_ORTU = "12345678"; 
 
-    // Muat data saat web dibuka
     renderLayar();
 
     function bukaForm(opsi) {
         menu = opsi;
         document.getElementById('panel-form').style.display = 'block';
         document.getElementById('in-uang').value = '';
-        document.getElementById('in-ket').value = '';
         document.getElementById('in-tujuan').value = '';
 
         if(opsi === 'setor') {
             document.getElementById('form-title').innerText = "💰 Form Setor Tunai Celengan";
             document.getElementById('div-tujuan').style.display = 'none';
+            // Perubahan contoh alasan khusus Setor
+            document.getElementById('in-ket').value = '';
+            document.getElementById('in-ket').placeholder = "Contoh: Sisa uang saku";
         } else if(opsi === 'tarik') {
             document.getElementById('form-title').innerText = "💵 Form Tarik Tunai Celengan";
             document.getElementById('div-tujuan').style.display = 'none';
+            // Perubahan contoh alasan khusus Tarik
+            document.getElementById('in-ket').value = '';
+            document.getElementById('in-ket').placeholder = "Contoh: Jajan / Beli alat tulis";
         } else if(opsi === 'transfer') {
             document.getElementById('form-title').innerText = "💸 Form Transfer Dana";
             document.getElementById('div-tujuan').style.display = 'block';
+            document.getElementById('in-ket').value = '';
+            document.getElementById('in-ket').placeholder = "Contoh: Berbagi uang jajan";
         }
     }
 
@@ -115,7 +121,6 @@
             return;
         }
 
-        // PANGGIL ORANG TUA SECARA FISIK MELALUI POP-UP SISTEM
         let aksiFisik = menu === 'setor' ? 'serahkan uang fisiknya' : 'ambil uang fisiknya';
         let pin = prompt(`📢 Panggil Ayah/Bunda, ${aksiFisik} sebesar Rp ${nominal.toLocaleString('id-ID')}.\n\n🧕 SERVER ORANGTUA - MASUKKAN PIN ORTU:`);
 
@@ -125,7 +130,6 @@
             return;
         }
 
-        // Jalankan Perhitungan Uang jika PIN Benar
         let infoLog = catatan;
         if(menu === 'setor') { saldo += nominal; infoLog = "Setor: " + catatan; }
         else if(menu === 'tarik') { saldo -= nominal; infoLog = "Tarik: " + catatan; }
@@ -156,7 +160,7 @@
     }
 
     function resetSistem() {
-        let pin = prompt("🧕 SERVER Orangtua - Masukkan PIN Anda:");
+        let pin = prompt("🧕 SERVER ORANGTUA - Masukkan PIN Anda:");
         if (pin === PIN_ORTU) {
             localStorage.clear(); saldo = 0; log = []; renderLayar(); tutupForm(); alert("Sistem di-reset.");
         } else if (pin !== null) { alert("PIN Salah!"); }
