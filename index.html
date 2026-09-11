@@ -101,8 +101,6 @@
             <input type="text" id="form-desc" placeholder="Contoh: Sisa uang saku / Beli mainan">
         </div>
         
-        <!-- BAGIAN INPUT PIN DI LAYAR DIHAPUS SUPAYA ANAK TIDAK BISA AKSES -->
-        
         <button class="btn-submit" id="btn-execute">Konfirmasi Transaksi</button>
         <button class="btn-cancel" id="btn-close">Batal</button>
     </div>
@@ -153,14 +151,14 @@
     document.addEventListener("DOMContentLoaded", () => {
         updateLayar();
 
-        // Trigger Tombol-Tombol
+        // Trigger Tombol-Tombol Utama
         document.getElementById('btn-setor').addEventListener('click', () => bukaForm('setor'));
         document.getElementById('btn-tarik').addEventListener('click', () => bukaForm('tarik'));
         document.getElementById('btn-transfer').addEventListener('click', () => bukaForm('transfer'));
         document.getElementById('btn-close').addEventListener('click', () => modal.style.display = 'none');
         
         document.getElementById('btn-admin-panel').addEventListener('click', () => {
-            let p = prompt("🧕 ZONA ORANGTUA - Masukkan PIN Anda:");
+            let p = prompt("🧕 SERVER INDUK - Masukkan PIN Anda:");
             if(p === PIN_INDUK) adminModal.style.display = 'block';
             else if(p !== null) alert("PIN Salah!");
         });
@@ -182,6 +180,8 @@
         document.getElementById('form-target').value = '';
 
         if(tipe === 'setor') {
-            document.getElementById('modal-title').innerText = "💰 Form Setor Tunai Celengan";
+            document.getElementById('modal-title').innerText = "💰 Form Setor Tunai Celengan Syariah";
             groupTarget.style.display = 'none';
         } else if(tipe === 'tarik') {
+            document.getElementById('modal-title').innerText = "💵 Form Tarik Tunai Mandiri";
+            groupTarget.style.display = 'none';
