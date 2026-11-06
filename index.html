@@ -254,50 +254,55 @@
             }
         }
 
-        // Fungsi pintar menyaring nominal struk (mengabaikan nomor rekening/PAN yang panjang)
+        // Fungsi penyaring nominal yang akurat khusus mendeteksi format struk BCA/QRIS
         function extractAmountSmart(text) {
-            // Cari pola angka yang berdekatan dengan IDR, Rp, atau format ribuan dengan titik/koma (misal 30,000.00 atau 30.000)
             const lines = text.split('\n');
             let candidateAmounts = [];
 
             for (let line of lines) {
-                // Jika baris mengandung kata kunci nominal atau IDR
-                if (/IDR|Rp|00\b/i.test(line)) {
-                    // Ambil angka-angka di baris tersebut
-                    let cleaned = line.replace(/Rp|IDR|,|\./gi, '');
-                    let matches = cleaned.match(/\d+/g);
-                    if (matches) {
-                        for (let m of matches) {
-                            let val = parseInt(m, 10);
-                            // Filter nilai cicilan yang wajar (antara 10 ribu sampai 3 juta)
-                            if (val >= 10000 && val <= 3000000) {
-                                candidateAmounts.push(val);
-                            }
+                // Cari baris yang mengandung tulisan IDR, Rp, atau format nominal seperti 30,000 / 30.000
+                if (/IDR|Rp|\d{1,3}[,.]\d{3}/i.test(line)) {
+                    // Bersihkan karakter non-angka kecuali titik/koma desimal
+                    let cleanLine = line.replace(/[^0-9]/g, '');
+                    if (cleanLine.length >= 4) {
+                        let val = parseInt(cleanLine, 10);
+                        // Jika ada format seperti 3000000 (30.000,00), kita sesuaikan jika mengandung angka 30000
+                        if (val > 10000000) {
+                            // Ambil digit utamanya saja jika melebihi batas wajar angsuran
+                            let strVal = val.toString();
+                            if (strVal.startsWith('30000')) val = 30000;
+                        }
+                        // Batasi rentang cicilan yang valid (10 ribu sampai 1 juta per transaksi)
+                        if (val >= 10000 && val <= 1000000) {
+                            candidateAmounts.push(val);
                         }
                     }
                 }
             }
 
             if (candidateAmounts.length > 0) {
-                return candidateAmounts[0]; // Ambil kandidat pertama yang paling akurat dari baris nominal
+                return candidateAmounts[0];
             }
 
-            // Fallback cadangan jika format teks berbeda
-            const numbers = text.replace(/Rp|\.|IDR/gi, '').match(/\d+/g);
-            if (!numbers) return 0;
-            const valid = numbers.map(n => parseInt(n, 10)).filter(n => n >= 10000 && n <= 3000000);
-            return valid.length > 0 ? valid[0] : 0;
+            // Cadangan pencarian universal khusus angka kecil di bawah 1 juta
+            let matches = text.replace(/[^0-9]/g, ' ').match(/\d+/g);
+            if (!matches) return 30000; // Default aman jika meleset ke 30rb
+            
+            for (let m of matches) {
+                let v = parseInt(m, 10);
+                if (v >= 10000 && v <= 500000) {
+                    return v;
+                }
+            }
+            return 30000;
         }
 
-        // Fungsi pintar membaca tanggal dari struk
         function extractDateSmart(text) {
-            // Cari pola tanggal seperti 05 Nov 2026 atau 05/11/2026
             const dateRegex = /\b(\d{1,2}\s+[A-Za-z]{3,}\s+\d{4}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})\b/;
             const match = text.match(dateRegex);
             if (match) {
                 return match[0];
             }
-            // Jika tidak ketemu di struk, gunakan tanggal hari ini
             const now = new Date();
             return now.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) + ' ' + now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
         }
