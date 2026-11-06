@@ -30,12 +30,12 @@
                 </div>
                 <div>
                     <span class="font-bold text-lg text-white tracking-tight">Manajemen<span class="text-[#92E3A9]">Keuangan</span></span>
-                    <span class="block text-[10px] text-slate-400 font-medium">Pembiayaan & Tabungan Pribadi</span>
+                    <span class="block text-[10px] text-slate-400 font-medium">Pembiayaan & Tabungan</span>
                 </div>
             </div>
             <div class="flex items-center gap-2">
-                <!-- Tombol Install PWA (Otomatis Sembunyi Jika Sudah Terinstall / Standalone Mode) -->
-                <button id="installAppBtn" onclick="installPWA()" class="hidden px-3 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-bold rounded-xl border border-amber-500/30 transition items-center gap-1">
+                <!-- Tombol Install PWA: Selalu tampil di browser, otomatis disembunyikan jika sudah dibuka sebagai PWA terinstall -->
+                <button id="installAppBtn" onclick="installPWA()" class="flex px-3 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-bold rounded-xl border border-amber-500/30 transition items-center gap-1 shadow-md shadow-amber-500/10">
                     📥 Install App
                 </button>
                 <button onclick="openAddLenderModal()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-[#92E3A9] text-xs font-bold rounded-xl border border-emerald-500/30 transition">
@@ -180,7 +180,7 @@
         </div>
     </div>
 
-    <!-- Modal Konfirmasi Hapus Transaksi dengan Upload Struk (TETAP AMAN) -->
+    <!-- Modal Konfirmasi Hapus Transaksi dengan Upload Struk -->
     <div id="deleteVerifyModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
             <h3 class="font-bold text-white text-base text-center">Verifikasi Hapus Transaksi</h3>
@@ -231,6 +231,22 @@
         </div>
     </div>
 
+    <!-- Modal Panduan Install Jika Diklik di Browser -->
+    <div id="installGuideModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl text-center">
+            <div class="w-12 h-12 bg-amber-500/20 text-amber-300 rounded-full flex items-center justify-center mx-auto font-bold text-xl">📥</div>
+            <h3 class="font-bold text-white text-base">Install Aplikasi</h3>
+            <p class="text-xs text-slate-300 text-left leading-relaxed">
+                Untuk menginstal aplikasi ini ke perangkat Anda agar bisa diakses layaknya aplikasi native:
+            </p>
+            <div class="text-xs text-slate-300 text-left bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
+                <p><b>📱 Android (Chrome):</b> Ketuk menu titik tiga (⋮) di kanan atas browser, lalu pilih <b>"Tambahkan ke Layar Utama"</b> atau <b>"Install Aplikasi"</b>.</p>
+                <p><b>💻 PC / Laptop (Chrome/Edge):</b> Klik ikon Install (🛜 atau 📥) di bagian kanan ujung address bar browser Anda.</p>
+            </div>
+            <button onclick="document.getElementById('installGuideModal').classList.add('hidden')" class="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow transition">Mengerti</button>
+        </div>
+    </div>
+
     <footer class="bg-slate-950 border-t border-slate-800 py-6 mt-auto text-center text-xs text-slate-400">
         <div class="max-w-5xl mx-auto px-4 space-y-2">
             <p>© 2026 Manajemen Keuangan — AX3OC</p>
@@ -238,33 +254,36 @@
     </footer>
 
     <script>
-        // Registrasi Service Worker Agar PWA Terdeteksi Layak Install
+        // Registrasi Service Worker Agar PWA Aktif
         if ('serviceWorker' in navigator) {
             const swCode = `self.addEventListener('fetch', (e) => { e.respondWith(fetch(e.request).catch(() => caches.match(e.request))); });`;
             const swBlob = new Blob([swCode], {type: 'text/javascript'});
             navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(err => console.log('SW error', err));
         }
 
-        // Logika PWA Install Prompt & Sembunyikan Otomatis Jika Sudah Terinstall (Standalone Mode)
+        // Variabel untuk menampung event prompt otomatis dari browser
         let deferredPrompt;
         const installBtn = document.getElementById('installAppBtn');
 
+        // Deteksi apakah aplikasi sudah berjalan dalam mode PWA terinstall (Standalone)
         function checkStandaloneMode() {
             const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
             if (isStandalone) {
+                // Sembunyikan tombol install jika sudah di dalam aplikasi PWA terinstall
                 installBtn.classList.add('hidden');
                 installBtn.classList.remove('flex');
+            } else {
+                // Pastikan tombol muncul di browser biasa
+                installBtn.classList.remove('hidden');
+                installBtn.classList.add('flex');
             }
         }
 
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
-            // Tampilkan tombol install hanya jika diakses via browser biasa (belum diinstall)
-            if (!window.matchMedia('(display-mode: standalone)').matches) {
-                installBtn.classList.remove('hidden');
-                installBtn.classList.add('flex');
-            }
+            installBtn.classList.remove('hidden');
+            installBtn.classList.add('flex');
         });
 
         async function installPWA() {
@@ -276,6 +295,9 @@
                 }
                 deferredPrompt = null;
                 installBtn.classList.add('hidden');
+            } else {
+                // Jika browser belum men-trigger prompt otomatis, tampilkan modal panduan install manual yang ramah pengguna
+                document.getElementById('installGuideModal').classList.remove('hidden');
             }
         }
 
@@ -372,7 +394,6 @@
             updateStatsUI();
         }
 
-        // Pengamanan Hapus Tab (Wajib ketik nama tab agar tidak salah klik)
         function openDeleteTabModal() {
             if (appData.length <= 1) {
                 alert('Minimal harus ada 1 tab aktif. Tidak dapat menghapus tab terakhir.');
@@ -461,7 +482,6 @@
             }).join('');
         }
 
-        // Buka Modal Verifikasi Hapus Transaksi Berdasarkan Struk
         function openDeleteModal(index) {
             document.getElementById('deleteTargetIndex').value = index;
             document.getElementById('deleteReceiptFile').value = '';
@@ -566,7 +586,6 @@
                     return;
                 }
 
-                // Pencegahan Double Upload
                 let isDuplicate = lender.payments.some(p => p.amount === detectedAmount && p.date === detectedDate);
                 if (isDuplicate) {
                     showModal('Gagal: Double Upload Terdeteksi', `Transaksi dengan nominal <b>Rp ${detectedAmount.toLocaleString('id-ID')}</b> dan tanggal <b>${detectedDate}</b> sudah pernah tercatat di tab ini.`);
@@ -602,7 +621,6 @@
 
         function extractAmountFromReceipt(text) {
             const lines = text.split('\n');
-            
             for (let line of lines) {
                 if (/IDR/i.test(line)) {
                     let rawNumbers = line.replace(/[^0-9]/g, '');
