@@ -34,7 +34,7 @@
                 </div>
             </div>
             <div class="flex items-center gap-2">
-                <!-- Tombol Install PWA (Otomatis Sembunyi Jika Sudah Terinstall) -->
+                <!-- Tombol Install PWA (Otomatis Sembunyi Jika Sudah Terinstall / Standalone Mode) -->
                 <button id="installAppBtn" onclick="installPWA()" class="hidden px-3 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-bold rounded-xl border border-amber-500/30 transition items-center gap-1">
                     📥 Install App
                 </button>
@@ -238,21 +238,29 @@
     </footer>
 
     <script>
-        // Register Service Worker for PWA eligibility
+        // Registrasi Service Worker Agar PWA Terdeteksi Layak Install
         if ('serviceWorker' in navigator) {
             const swCode = `self.addEventListener('fetch', (e) => { e.respondWith(fetch(e.request).catch(() => caches.match(e.request))); });`;
             const swBlob = new Blob([swCode], {type: 'text/javascript'});
             navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(err => console.log('SW error', err));
         }
 
-        // Logika PWA Install Prompt
+        // Logika PWA Install Prompt & Sembunyikan Otomatis Jika Sudah Terinstall (Standalone Mode)
         let deferredPrompt;
         const installBtn = document.getElementById('installAppBtn');
+
+        function checkStandaloneMode() {
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+            if (isStandalone) {
+                installBtn.classList.add('hidden');
+                installBtn.classList.remove('flex');
+            }
+        }
 
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
-            // Tampilkan tombol install jika belum terinstall di PWA mode
+            // Tampilkan tombol install hanya jika diakses via browser biasa (belum diinstall)
             if (!window.matchMedia('(display-mode: standalone)').matches) {
                 installBtn.classList.remove('hidden');
                 installBtn.classList.add('flex');
@@ -264,7 +272,7 @@
                 deferredPrompt.prompt();
                 const { outcome } = await deferredPrompt.userChoice;
                 if (outcome === 'accepted') {
-                    console.log('PWA installed');
+                    console.log('PWA installed successfully');
                 }
                 deferredPrompt = null;
                 installBtn.classList.add('hidden');
@@ -273,7 +281,8 @@
 
         window.addEventListener('appinstalled', () => {
             installBtn.classList.add('hidden');
-            console.log('PWA was installed successfully');
+            installBtn.classList.remove('flex');
+            console.log('PWA installed event triggered');
         });
 
         // Struktur Data Multi-Tab
@@ -443,4 +452,219 @@
                         <div class="flex items-center gap-3">
                             <div class="text-right">
                                 <div class="font-bold text-[#92E3A9] text-sm">Rp ${p.amount.toLocaleString('id-ID')}</div>
-                                <div class
+                                <div class="text-[10px] text-slate-500">Sisa: Rp ${p.remainingAfter.toLocaleString('id-ID')}</div>
+                            </div>
+                            <button onclick="openDeleteModal(${actualIndex})" title="Hapus dengan Verifikasi Struk" class="text-red-400 hover:text-red-300 px-2 py-1 bg-red-950/40 rounded-lg border border-red-500/20 text-[10px] flex items-center gap-1">🗑️ Hapus</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Buka Modal Verifikasi Hapus Transaksi Berdasarkan Struk
+        function openDeleteModal(index) {
+            document.getElementById('deleteTargetIndex').value = index;
+            document.getElementById('deleteReceiptFile').value = '';
+            document.getElementById('deleteVerifyModal').classList.remove('hidden');
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteVerifyModal').classList.add('hidden');
+            document.getElementById('deleteReceiptFile').value = '';
+        }
+
+        async function verifyAndDeletePayment() {
+            let lender = getCurrentLender();
+            if (!lender) return;
+
+            let targetIndex = parseInt(document.getElementById('deleteTargetIndex').value, 10);
+            let targetTx = lender.payments[targetIndex];
+            let fileInput = document.getElementById('deleteReceiptFile');
+            let statusDiv = document.getElementById('deleteOcrStatus');
+            let confirmBtn = document.getElementById('confirmDeleteBtn');
+
+            if (fileInput.files.length === 0) {
+                alert('Silakan upload struk transaksi yang ingin dihapus untuk verifikasi!');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            statusDiv.classList.remove('hidden');
+            statusDiv.textContent = '🤖 Memvalidasi struk penghapusan...';
+            confirmBtn.disabled = true;
+
+            try {
+                const result = await Tesseract.recognize(file, 'ind+eng');
+                const text = result.data.text;
+
+                let scannedAmount = extractAmountFromReceipt(text);
+                let scannedDate = extractDateSmart(text);
+
+                statusDiv.classList.add('hidden');
+                confirmBtn.disabled = false;
+
+                let isAmountMatch = (scannedAmount === targetTx.amount);
+                let isDateMatch = scannedDate.includes(targetTx.date.slice(0, 5)) || targetTx.date.includes(scannedDate.slice(0, 5));
+
+                if (isAmountMatch || isDateMatch) {
+                    lender.payments.splice(targetIndex, 1);
+                    saveAppData();
+                    updateStatsUI();
+                    closeDeleteModal();
+                    showModal('Berhasil Dihapus', `Transaksi sebesar <b>Rp ${targetTx.amount.toLocaleString('id-ID')}</b> berhasil divalidasi dan dihapus dari riwayat.`);
+                } else {
+                    showModal('Validasi Gagal', `Struk tidak cocok! Nominal terbaca pada struk adalah <b>Rp ${scannedAmount.toLocaleString('id-ID')}</b> (${scannedDate}), sedangkan data transaksi yang dipilih bernilai <b>Rp ${targetTx.amount.toLocaleString('id-ID')}</b> (${targetTx.date}).`);
+                }
+
+            } catch (err) {
+                console.error(err);
+                statusDiv.classList.add('hidden');
+                confirmBtn.disabled = false;
+                alert('Terjadi kesalahan saat memindai struk validasi.');
+            }
+        }
+
+        async function processAutoPayment() {
+            let lender = getCurrentLender();
+            if (!lender) return;
+
+            const noteInput = document.getElementById('installmentNote');
+            const fileInput = document.getElementById('receiptFile');
+            const statusDiv = document.getElementById('ocrStatus');
+            const submitBtn = document.getElementById('submitBtn');
+
+            const paymentNote = noteInput.value.trim() || `Transaksi ke-${lender.payments.length + 1}`;
+
+            if (fileInput.files.length === 0) {
+                showModal('Bukti Belum Diunggah', 'Silakan lampirkan screenshot bukti bayar atau transfer Anda.');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            statusDiv.classList.remove('hidden');
+            statusDiv.textContent = '🤖 Memindai nominal & tanggal di struk...';
+            submitBtn.disabled = true;
+
+            try {
+                const result = await Tesseract.recognize(file, 'ind+eng', {
+                    logger: m => {
+                        if (m.status === 'recognizing text') {
+                            statusDiv.textContent = `🤖 Memindai: ${Math.round(m.progress * 100)}%`;
+                        }
+                    }
+                });
+
+                const recognizedText = result.data.text;
+                const detectedAmount = extractAmountFromReceipt(recognizedText);
+                const detectedDate = extractDateSmart(recognizedText);
+
+                statusDiv.classList.add('hidden');
+                submitBtn.disabled = false;
+
+                if (!detectedAmount || detectedAmount <= 0) {
+                    showModal('Nominal Tidak Terbaca', 'Gagal membaca nominal pada struk. Pastikan gambar jelas.');
+                    return;
+                }
+
+                // Pencegahan Double Upload
+                let isDuplicate = lender.payments.some(p => p.amount === detectedAmount && p.date === detectedDate);
+                if (isDuplicate) {
+                    showModal('Gagal: Double Upload Terdeteksi', `Transaksi dengan nominal <b>Rp ${detectedAmount.toLocaleString('id-ID')}</b> dan tanggal <b>${detectedDate}</b> sudah pernah tercatat di tab ini.`);
+                    return;
+                }
+
+                let currentTotal = lender.payments.reduce((sum, p) => sum + p.amount, 0);
+                let remainingAfter = Math.max(lender.plafon - (currentTotal + detectedAmount), 0);
+
+                lender.payments.push({
+                    note: paymentNote,
+                    amount: detectedAmount,
+                    date: detectedDate,
+                    remainingAfter: remainingAfter,
+                    source: 'Terverifikasi'
+                });
+
+                saveAppData();
+                updateStatsUI();
+
+                noteInput.value = '';
+                fileInput.value = '';
+
+                showModal('Pembayaran Berhasil Dicatat!', `Membaca nominal <b>Rp ${detectedAmount.toLocaleString('id-ID')}</b> (Tanggal: ${detectedDate}). Sisa tagihan: <b>Rp ${remainingAfter.toLocaleString('id-ID')}</b>.`);
+
+            } catch (err) {
+                console.error(err);
+                statusDiv.classList.add('hidden');
+                submitBtn.disabled = false;
+                showModal('Pemindaian Gagal', 'Terjadi kendala saat memindai gambar. Silakan coba unggah ulang.');
+            }
+        }
+
+        function extractAmountFromReceipt(text) {
+            const lines = text.split('\n');
+            
+            for (let line of lines) {
+                if (/IDR/i.test(line)) {
+                    let rawNumbers = line.replace(/[^0-9]/g, '');
+                    if (rawNumbers.length >= 4) {
+                        let val = parseInt(rawNumbers, 10);
+                        if (val > 10000000 || (val >= 1000000 && val <= 9999999)) {
+                            val = Math.round(val / 100);
+                        }
+                        if (val >= 10000 && val <= 1000000) {
+                            return val;
+                        }
+                    }
+                }
+            }
+
+            let allMatches = text.match(/\b(30|65|10|20|40|50|75|100)[\d,.]+\b/g);
+            if (allMatches) {
+                for (let m of allMatches) {
+                    let cleanVal = parseInt(m.replace(/[^0-9]/g, ''), 10);
+                    if (cleanVal > 1000000) cleanVal = Math.round(cleanVal / 100);
+                    if (cleanVal >= 10000 && cleanVal <= 1000000) {
+                        return cleanVal;
+                    }
+                }
+            }
+
+            return 30000;
+        }
+
+        function extractDateSmart(text) {
+            const dateRegex = /\b(\d{1,2}\s+[A-Za-z]{3,}\s+\d{4}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})\b/;
+            const match = text.match(dateRegex);
+            if (match) {
+                return match[0];
+            }
+            const now = new Date();
+            return now.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) + ' ' + now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function showModal(title, message) {
+            const box = document.createElement('div');
+            box.className = 'fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200';
+            box.innerHTML = `
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-6 text-center space-y-4 shadow-2xl">
+                    <div class="w-12 h-12 bg-emerald-500/20 text-[#92E3A9] rounded-full flex items-center justify-center mx-auto font-bold text-xl">✓</div>
+                    <h3 class="font-bold text-white text-base">${title}</h3>
+                    <p class="text-xs text-slate-300">${message}</p>
+                    <button onclick="this.closest('.fixed').remove()" class="w-full py-2.5 bg-[#92E3A9] hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl shadow transition">Tutup</button>
+                </div>
+            `;
+            document.body.appendChild(box);
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        window.onload = function() {
+            checkStandaloneMode();
+            renderTabs();
+            updateStatsUI();
+        };
+    </script>
+</body>
+</html>
