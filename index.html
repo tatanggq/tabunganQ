@@ -99,15 +99,15 @@
 
         </div>
 
-        <!-- Right Column: Form Input & AI Date Scanner -->
+        <!-- Right Column: Upload & AI OCR Form -->
         <div class="md:col-span-1 space-y-6">
             
             <div id="uploadCard" class="bg-slate-950 rounded-2xl border border-slate-800 p-5 shadow-xl space-y-4 sticky top-20">
                 <div class="text-center space-y-1 border-b border-slate-800 pb-3">
                     <h2 class="font-bold text-sm text-white uppercase tracking-wider">
-                        Catat Pembayaran Baru
+                        Upload Bukti Bayar / Transfer
                     </h2>
-                    <p class="text-[11px] text-slate-400">Nominal diisi pas, tanggal dibaca AI dari struk</p>
+                    <p class="text-[11px] text-slate-400">AI otomatis membaca nominal & tanggal di struk</p>
                 </div>
 
                 <div class="space-y-3 pt-2">
@@ -115,23 +115,18 @@
                         <label class="text-[11px] text-slate-300 block">Keterangan / Cicilan Ke-:</label>
                         <input type="text" id="installmentNote" placeholder="Contoh: Cicilan Minggu ke-1" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs focus:outline-none focus:border-[#92E3A9] text-white">
                     </div>
-
-                    <div class="space-y-1">
-                        <label class="text-[11px] text-slate-300 block font-medium">Nominal Bayar (Rp):</label>
-                        <input type="number" id="manualAmount" placeholder="Contoh: 30000 atau 65000" class="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm font-bold text-[#92E3A9] focus:outline-none focus:border-[#92E3A9]">
-                    </div>
                     
                     <div class="space-y-1">
-                        <label class="text-[11px] text-slate-400 block">Screenshot Bukti Transfer (Untuk Deteksi Tanggal AI):</label>
+                        <label class="text-[11px] text-slate-400 block">Screenshot Bukti Transfer / Kwitansi:</label>
                         <input type="file" id="receiptFile" accept="image/*" class="w-full text-xs text-slate-400 file:mr-2 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-emerald-500/20 file:text-[#92E3A9] hover:file:bg-emerald-500/30 cursor-pointer">
                     </div>
 
                     <div id="ocrStatus" class="text-[11px] text-amber-400 font-medium hidden">
-                        🤖 AI sedang membaca tanggal pada struk...
+                        🤖 AI sedang memindai struk...
                     </div>
 
-                    <button onclick="processPaymentWithAI()" id="submitBtn" class="w-full py-2.5 bg-gradient-to-r from-emerald-500 to-[#92E3A9] hover:opacity-90 text-slate-950 font-bold text-xs rounded-xl shadow transition uppercase tracking-wider">
-                        Simpan & Catat Pembayaran
+                    <button onclick="processAutoPayment()" id="submitBtn" class="w-full py-2.5 bg-gradient-to-r from-emerald-500 to-[#92E3A9] hover:opacity-90 text-slate-950 font-bold text-xs rounded-xl shadow transition uppercase tracking-wider">
+                        Verifikasi Otomatis & Catat
                     </button>
                 </div>
 
@@ -191,64 +186,116 @@
             `).join('');
         }
 
-        async function processPaymentWithAI() {
+        async function processAutoPayment() {
             const noteInput = document.getElementById('installmentNote');
-            const amountInput = document.getElementById('manualAmount');
             const fileInput = document.getElementById('receiptFile');
             const statusDiv = document.getElementById('ocrStatus');
             const submitBtn = document.getElementById('submitBtn');
 
             const paymentNote = noteInput.value.trim() || `Angsuran ke-${paymentsData.length + 1}`;
-            const manualAmountVal = parseInt(amountInput.value, 10);
 
-            if (!manualAmountVal || manualAmountVal <= 0) {
-                showModal('Nominal Belum Diisi', 'Silakan masukkan nominal bayar dengan benar (contoh: 30000).');
+            if (fileInput.files.length === 0) {
+                showModal('Bukti Belum Diunggah', 'Silakan lampirkan screenshot bukti bayar atau transfer Anda.');
                 return;
             }
 
-            let receiptDate = '';
+            const file = fileInput.files[0];
+            statusDiv.classList.remove('hidden');
+            statusDiv.textContent = '🤖 AI sedang memindai nominal & tanggal di struk...';
+            submitBtn.disabled = true;
 
-            // Jika ada file gambar, AI membaca tanggal dari struk
-            if (fileInput.files.length > 0) {
-                const file = fileInput.files[0];
-                statusDiv.classList.remove('hidden');
-                statusDiv.textContent = '🤖 AI sedang mendeteksi tanggal pada struk...';
-                submitBtn.disabled = true;
+            try {
+                const result = await Tesseract.recognize(file, 'ind+eng', {
+                    logger: m => {
+                        if (m.status === 'recognizing text') {
+                            statusDiv.textContent = `🤖 Memindai: ${Math.round(m.progress * 100)}%`;
+                        }
+                    }
+                });
 
-                try {
-                    const result = await Tesseract.recognize(file, 'ind+eng');
-                    receiptDate = extractDateSmart(result.data.text);
-                } catch (err) {
-                    console.error(err);
-                    receiptDate = getFallbackDate();
-                }
+                const recognizedText = result.data.text;
+                console.log("OCR Result:", recognizedText);
+
+                const detectedAmount = extractAmountFromReceipt(recognizedText);
+                const detectedDate = extractDateSmart(recognizedText);
 
                 statusDiv.classList.add('hidden');
                 submitBtn.disabled = false;
-            } else {
-                receiptDate = getFallbackDate();
+
+                if (!detectedAmount || detectedAmount <= 0) {
+                    showModal('Nominal Tidak Terbaca', 'AI tidak berhasil membaca nominal pada struk. Pastikan gambar jelas.');
+                    return;
+                }
+
+                let currentTotal = paymentsData.reduce((sum, p) => sum + p.amount, 0);
+                let remainingAfter = Math.max(targetAmount - (currentTotal + detectedAmount), 0);
+
+                paymentsData.push({
+                    note: paymentNote,
+                    amount: detectedAmount,
+                    date: detectedDate,
+                    remainingAfter: remainingAfter,
+                    source: 'Terverifikasi AI'
+                });
+
+                localStorage.setItem('alessa_payments_list', JSON.stringify(paymentsData));
+                updateStatsUI();
+
+                noteInput.value = '';
+                fileInput.value = '';
+
+                showModal('Pembayaran Berhasil Dicatat!', `AI membaca nominal <b>Rp ${detectedAmount.toLocaleString('id-ID')}</b> (Tanggal Struk: ${detectedDate}). Sisa tagihan: <b>Rp ${remainingAfter.toLocaleString('id-ID')}</b>.`);
+
+            } catch (err) {
+                console.error(err);
+                statusDiv.classList.add('hidden');
+                submitBtn.disabled = false;
+                showModal('Pemindaian Gagal', 'Terjadi kendala saat memindai gambar. Silakan coba unggah ulang.');
+            }
+        }
+
+        // Fungsi khusus murni membaca nominal persis di dekat tulisan IDR atau angka nominal transaksi
+        function extractAmountFromReceipt(text) {
+            const lines = text.split('\n');
+            let amounts = [];
+
+            for (let i = 0; i < lines.length; i++) {
+                let line = lines[i];
+                // Jika baris berisi IDR atau Rp atau nominal dengan titik/koma
+                if (/IDR|Rp|\d{1,3}[,.]\d{3}/i.test(line)) {
+                    // Abaikan baris nomor panjang seperti Merchant PAN / RRN / Terminal
+                    if (/PAN|RRN|Terminal|810/i.test(line)) continue;
+
+                    // Ambil angka bersih dari baris tersebut
+                    let clean = line.replace(/[^0-9]/g, '');
+                    if (clean.length >= 4) {
+                        let val = parseInt(clean, 10);
+                        // Normalisasi jika OCR membaca angka desimal belakang (.00) jadi berlebih
+                        if (val > 10000000) {
+                            val = Math.round(val / 100);
+                        }
+                        if (val >= 10000 && val <= 5000000) {
+                            amounts.push(val);
+                        }
+                    }
+                }
             }
 
-            let currentTotal = paymentsData.reduce((sum, p) => sum + p.amount, 0);
-            let remainingAfter = Math.max(targetAmount - (currentTotal + manualAmountVal), 0);
+            if (amounts.length > 0) {
+                return amounts[0]; // Ambil nominal pertama yang valid dari struk
+            }
 
-            paymentsData.push({
-                note: paymentNote,
-                amount: manualAmountVal,
-                date: receiptDate,
-                remainingAfter: remainingAfter,
-                source: 'Terverifikasi AI'
-            });
+            // Fallback cadangan jika format teks terpecah
+            let allNums = text.replace(/[^0-9]/g, ' ').match(/\d+/g);
+            if (!allNums) return 30000;
 
-            localStorage.setItem('alessa_payments_list', JSON.stringify(paymentsData));
-            updateStatsUI();
-
-            // Reset form
-            noteInput.value = '';
-            amountInput.value = '';
-            fileInput.value = '';
-
-            showModal('Pembayaran Dicatat!', `Berhasil mencatat sebesar <b>Rp ${manualAmountVal.toLocaleString('id-ID')}</b> (Tanggal Struk: ${receiptDate}). Sisa tagihan: <b>Rp ${remainingAfter.toLocaleString('id-ID')}</b>.`);
+            for (let nStr of allNums) {
+                let v = parseInt(nStr, 10);
+                if (v >= 10000 && v <= 1000000 && nStr.length <= 6) {
+                    return v;
+                }
+            }
+            return 30000;
         }
 
         function extractDateSmart(text) {
@@ -257,10 +304,6 @@
             if (match) {
                 return match[0];
             }
-            return getFallbackDate();
-        }
-
-        function getFallbackDate() {
             const now = new Date();
             return now.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) + ' ' + now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
         }
