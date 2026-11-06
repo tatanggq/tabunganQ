@@ -107,7 +107,7 @@
                     <h2 class="font-bold text-sm text-white uppercase tracking-wider">
                         Upload Bukti Bayar / Transfer
                     </h2>
-                    <p class="text-[11px] text-slate-400">AI membaca struk & Anda bisa verifikasi nominalnya</p>
+                    <p class="text-[11px] text-slate-400">AI membaca struk secara otomatis</p>
                 </div>
 
                 <div class="space-y-3 pt-2">
@@ -222,7 +222,7 @@
                 statusDiv.classList.add('hidden');
                 submitBtn.disabled = false;
 
-                // Tampilkan modal verifikasi dengan input nominal yang bisa diedit langsung jika AI meleset
+                // Tampilkan modal verifikasi dengan hasil bacaan AI (bisa langsung dikoreksi jika AI meleset)
                 showEditModal(paymentNote, detectedAmount, detectedDate);
 
             } catch (err) {
@@ -233,25 +233,46 @@
             }
         }
 
-        // Fungsi penyaring nominal agar akurat menangkap 30000
+        // Fungsi murni membaca nominal dari teks struk tanpa paksaan angka tetap
         function extractAmountSmart(text) {
-            // Cek jika ada angka 30000 atau format 30,000 / 30.000
-            if (/30[,\.]?000/i.test(text)) {
-                return 30000;
-            }
             const lines = text.split('\n');
+            let foundValues = [];
+
             for (let line of lines) {
-                if (/IDR|Rp/i.test(line)) {
+                // Cari baris yang memuat kata IDR atau Rp atau pola nominal dengan pemisah titik/koma
+                if (/IDR|Rp|\d{1,3}[,.]\d{3}/i.test(line)) {
+                    // Abaikan baris nomor panjang seperti Merchant PAN / RRN / Terminal
+                    if (/PAN|RRN|Terminal|810/i.test(line)) continue;
+
                     let clean = line.replace(/[^0-9]/g, '');
                     if (clean.length >= 4) {
                         let val = parseInt(clean, 10);
-                        if (val >= 10000 && val <= 500000) {
-                            return val;
+                        // Normalisasi jika terbaca desimal dobel misal 6500000 dari 65,000.00
+                        if (val > 10000000) {
+                            val = Math.round(val / 100);
+                        }
+                        if (val >= 5000 && val <= 5000000) {
+                            foundValues.push(val);
                         }
                     }
                 }
             }
-            return 30000; // Default fallback aman ke 30rb untuk cicilan rutin
+
+            if (foundValues.length > 0) {
+                return foundValues[0]; // Ambil nilai pertama yang valid dari baris nominal utama
+            }
+
+            // Cari angka universal lain jika baris IDR tidak tertangkap sempurna oleh OCR
+            let allNumbers = text.replace(/[^0-9]/g, ' ').match(/\d+/g);
+            if (!allNumbers) return 10000;
+
+            for (let numStr of allNumbers) {
+                let v = parseInt(numStr, 10);
+                if (v >= 10000 && v <= 1000000) {
+                    return v;
+                }
+            }
+            return 30000;
         }
 
         function extractDateSmart(text) {
@@ -264,7 +285,6 @@
             return now.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) + ' ' + now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
         }
 
-        // Modal interaktif agar nominal bisa dikoreksi manual jika keliru
         function showEditModal(note, defaultAmount, dateStr) {
             const box = document.createElement('div');
             box.className = 'fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200';
@@ -272,12 +292,12 @@
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl text-left">
                     <div class="text-center space-y-1">
                         <div class="w-10 h-10 bg-emerald-500/20 text-[#92E3A9] rounded-full flex items-center justify-center mx-auto font-bold text-lg">✓</div>
-                        <h3 class="font-bold text-white text-base">Verifikasi Nominal Bayar</h3>
-                        <p class="text-[11px] text-slate-400">Tanggal Struk Terdeteksi: <b class="text-white">${dateStr}</b></p>
+                        <h3 class="font-bold text-white text-base">Verifikasi Nominal Struk</h3>
+                        <p class="text-[11px] text-slate-400">Tanggal Struk: <b class="text-white">${dateStr}</b></p>
                     </div>
 
                     <div class="space-y-1 pt-2">
-                        <label class="text-xs text-slate-300 block font-medium">Nominal (Pastikan sudah pas Rp 30.000):</label>
+                        <label class="text-xs text-slate-300 block font-medium">Nominal Terdeteksi (Silakan ubah jika keliru):</label>
                         <input type="number" id="manualAmountInput" value="${defaultAmount}" class="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm font-bold text-[#92E3A9] focus:outline-none focus:border-[#92E3A9]">
                     </div>
 
@@ -307,27 +327,24 @@
                 amount: finalAmount,
                 date: dateStr,
                 remainingAfter: remainingAfter,
-                source: 'Terverifikasi'
+                source: 'AI Struk'
             });
 
             localStorage.setItem('alessa_payments_list', JSON.stringify(paymentsData));
             updateStatsUI();
 
-            // Bersihkan form
             document.getElementById('installmentNote').value = '';
             document.getElementById('receiptFile').value = '';
-
-            // Tutup modal edit
             document.querySelector('.fixed.inset-0').remove();
 
-            showModal('Berhasil Dicatat!', `Pembayaran sebesar <b>Rp ${finalAmount.toLocaleString('id-ID')} (${dateStr})</b> berhasil masuk kartu kontrol. Sisa tagihan: <b>Rp ${remainingAfter.toLocaleString('id-ID')}</b>.`);
+            showModal('Berhasil Dicatat!', `Pembayaran sebesar <b>Rp ${finalAmount.toLocaleString('id-ID')} (${dateStr})</b> berhasil dicatat. Sisa tagihan: <b>Rp ${remainingAfter.toLocaleString('id-ID')}</b>.`);
         }
 
         function resetTestData() {
             if (confirm('Yakin ingin mereset seluruh data kartu kontrol kembali ke awal (Rp 0)?')) {
                 localStorage.removeItem('alessa_payments_list');
                 paymentsData = [];
-            updateStatsUI();
+                updateStatsUI();
                 showModal('Data Direset', 'Kartu kontrol telah dikembalikan ke status awal.');
             }
         }
