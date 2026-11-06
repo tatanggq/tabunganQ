@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kartu Kontrol Keuangan & Angsuran</title>
+    <title>Kontrol Keuangan & Angsuran</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Tesseract.js for Free Client-Side OCR (AI Receipt Scanning) -->
@@ -27,7 +27,7 @@
                 </div>
                 <div>
                     <span class="font-bold text-lg text-white tracking-tight">Manajemen<span class="text-[#92E3A9]">Keuangan</span></span>
-                    <span class="block text-[10px] text-slate-400 font-medium">Pembiayaan & Tabungan</span>
+                    <span class="block text-[10px] text-slate-400 font-medium">Pembiayaan & Tabungan Pribadi</span>
                 </div>
             </div>
             <div class="flex items-center gap-2">
@@ -68,7 +68,7 @@
                             <h1 id="tabTitleDisplay" class="text-xl md:text-2xl font-bold text-white leading-snug pt-2">
                                 -
                             </h1>
-                            <p class="text-xs text-slate-400">Pemohon: Helmi Nurliansyah (Pabrik Kecap Merak / PT Weharima)</p>
+                            <p class="text-xs text-slate-400">Pemohon: Helmi Nurliansyah</p>
                         </div>
                     </div>
 
@@ -156,6 +156,30 @@
 
     </main>
 
+    <!-- Modal Konfirmasi Hapus Transaksi dengan Upload Struk -->
+    <div id="deleteVerifyModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
+            <h3 class="font-bold text-white text-base text-center">Verifikasi Hapus Transaksi</h3>
+            <p class="text-xs text-slate-300 text-center">Untuk keamanan, silakan upload ulang struk transaksi yang ingin dihapus agar AI memvalidasi nominal dan tanggalnya.</p>
+            
+            <input type="hidden" id="deleteTargetIndex" value="">
+
+            <div class="space-y-2">
+                <label class="text-[11px] text-slate-400 block">Upload Struk Transaksi Terkait:</label>
+                <input type="file" id="deleteReceiptFile" accept="image/*" class="w-full text-xs text-slate-400 file:mr-2 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-red-500/20 file:text-red-400 hover:file:bg-red-500/30 cursor-pointer">
+            </div>
+
+            <div id="deleteOcrStatus" class="text-[11px] text-amber-400 font-medium hidden text-center">
+                🤖 Memvalidasi struk penghapusan...
+            </div>
+
+            <div class="flex gap-2 pt-2">
+                <button onclick="closeDeleteModal()" class="w-1/2 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl transition">Batal</button>
+                <button onclick="verifyAndDeletePayment()" id="confirmDeleteBtn" class="w-1/2 py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl shadow transition">Validasi & Hapus</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal Tambah Tab Pemberi Pembiayaan Baru -->
     <div id="addLenderModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
@@ -190,8 +214,7 @@
     </footer>
 
     <script>
-        // Struktur Data Multi-Tab dengan Kustomisasi Judul
-        let appData = JSON.parse(localStorage.getItem('alessa_multilender_data_v2')) || [
+        let appData = JSON.parse(localStorage.getItem('alessa_multilender_data_v3')) || [
             { 
                 id: 'lender_1', 
                 name: 'Bpk. Ari Wahyudi', 
@@ -201,11 +224,11 @@
             }
         ];
 
-        let activeLenderId = localStorage.getItem('alessa_active_lender_v2') || appData[0].id;
+        let activeLenderId = localStorage.getItem('alessa_active_lender_v3') || appData[0].id;
 
         function saveAppData() {
-            localStorage.setItem('alessa_multilender_data_v2', JSON.stringify(appData));
-            localStorage.setItem('alessa_active_lender_v2', activeLenderId);
+            localStorage.setItem('alessa_multilender_data_v3', JSON.stringify(appData));
+            localStorage.setItem('alessa_active_lender_v3', activeLenderId);
         }
 
         function getCurrentLender() {
@@ -284,7 +307,7 @@
             }
 
             let lender = getCurrentLender();
-            if (confirm(`Yakin ingin menghapus tab "${lender.name}" beserta seluruh riwayat transaksinya?`)) {
+            if (confirm(`⚠️ PERINGATAN: Yakin ingin menghapus tab "${lender.name}" beserta seluruh riwayat transaksinya?`)) {
                 appData = appData.filter(l => l.id !== activeLenderId);
                 activeLenderId = appData[0].id;
                 saveAppData();
@@ -313,7 +336,6 @@
             let percent = Math.min(Math.round((totalCollected / lender.plafon) * 100), 100);
             document.getElementById('progressBar').style.width = percent + '%';
 
-            // Status Lunas Otomatis
             const statusBadge = document.getElementById('statusLunasBadge');
             if (totalCollected >= lender.plafon && lender.plafon > 0) {
                 statusBadge.textContent = 'Status: 🎉 LUNAS';
@@ -342,21 +364,75 @@
                                 <div class="font-bold text-[#92E3A9] text-sm">Rp ${p.amount.toLocaleString('id-ID')}</div>
                                 <div class="text-[10px] text-slate-500">Sisa: Rp ${p.remainingAfter.toLocaleString('id-ID')}</div>
                             </div>
-                            <button onclick="deletePayment(${actualIndex})" title="Hapus Riwayat" class="text-red-400 hover:text-red-300 p-1 bg-red-950/40 rounded-lg border border-red-500/20 text-[10px]">✕</button>
+                            <button onclick="openDeleteModal(${actualIndex})" title="Hapus dengan Verifikasi Struk" class="text-red-400 hover:text-red-300 px-2 py-1 bg-red-950/40 rounded-lg border border-red-500/20 text-[10px] flex items-center gap-1">🗑️ Hapus</button>
                         </div>
                     </div>
                 `;
             }).join('');
         }
 
-        function deletePayment(index) {
+        // Buka Modal Verifikasi Hapus Berdasarkan Struk
+        function openDeleteModal(index) {
+            document.getElementById('deleteTargetIndex').value = index;
+            document.getElementById('deleteReceiptFile').value = '';
+            document.getElementById('deleteVerifyModal').classList.remove('hidden');
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteVerifyModal').classList.add('hidden');
+            document.getElementById('deleteReceiptFile').value = '';
+        }
+
+        async function verifyAndDeletePayment() {
             let lender = getCurrentLender();
             if (!lender) return;
 
-            if (confirm('Yakin ingin menghapus riwayat transaksi ini?')) {
-                lender.payments.splice(index, 1);
-                saveAppData();
-                updateStatsUI();
+            let targetIndex = parseInt(document.getElementById('deleteTargetIndex').value, 10);
+            let targetTx = lender.payments[targetIndex];
+            let fileInput = document.getElementById('deleteReceiptFile');
+            let statusDiv = document.getElementById('deleteOcrStatus');
+            let confirmBtn = document.getElementById('confirmDeleteBtn');
+
+            if (fileInput.files.length === 0) {
+                alert('Silakan upload struk transaksi yang ingin dihapus untuk verifikasi!');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            statusDiv.classList.remove('hidden');
+            statusDiv.textContent = '🤖 Memvalidasi struk penghapusan...';
+            confirmBtn.disabled = true;
+
+            try {
+                const result = await Tesseract.recognize(file, 'ind+eng');
+                const text = result.data.text;
+
+                let scannedAmount = extractAmountFromReceipt(text);
+                let scannedDate = extractDateSmart(text);
+
+                statusDiv.classList.add('hidden');
+                confirmBtn.disabled = false;
+
+                // Validasi kecocokan nominal dan tanggal (fleksibel toleransi pencocokan)
+                let isAmountMatch = (scannedAmount === targetTx.amount);
+                // Cek apakah tanggal struk mengandung bagian hari/bulan yang sama dengan data tersimpan
+                let isDateMatch = scannedDate.includes(targetTx.date.slice(0, 5)) || targetTx.date.includes(scannedDate.slice(0, 5));
+
+                if (isAmountMatch || isDateMatch) {
+                    lender.payments.splice(targetIndex, 1);
+                    saveAppData();
+                    updateStatsUI();
+                    closeDeleteModal();
+                    showModal('Berhasil Dihapus', `Transaksi sebesar <b>Rp ${targetTx.amount.toLocaleString('id-ID')}</b> berhasil divalidasi dan dihapus dari riwayat.`);
+                } else {
+                    showModal('Validasi Gagal', `Struk tidak cocok! Nominal terbaca pada struk adalah <b>Rp ${scannedAmount.toLocaleString('id-ID')}</b> (${scannedDate}), sedangkan data transaksi yang dipilih bernilai <b>Rp ${targetTx.amount.toLocaleString('id-ID')}</b> (${targetTx.date}).`);
+                }
+
+            } catch (err) {
+                console.error(err);
+                statusDiv.classList.add('hidden');
+                confirmBtn.disabled = false;
+                alert('Terjadi kesalahan saat memindai struk validasi.');
             }
         }
 
@@ -391,8 +467,6 @@
                 });
 
                 const recognizedText = result.data.text;
-                console.log("OCR Result:", recognizedText);
-
                 const detectedAmount = extractAmountFromReceipt(recognizedText);
                 const detectedDate = extractDateSmart(recognizedText);
 
@@ -404,7 +478,7 @@
                     return;
                 }
 
-                // Pencegahan Double Upload (Mencegah nominal dan tanggal persis sama di tab aktif)
+                // Pencegahan Double Upload
                 let isDuplicate = lender.payments.some(p => p.amount === detectedAmount && p.date === detectedDate);
                 if (isDuplicate) {
                     showModal('Gagal: Double Upload Terdeteksi', `Transaksi dengan nominal <b>Rp ${detectedAmount.toLocaleString('id-ID')}</b> dan tanggal <b>${detectedDate}</b> sudah pernah tercatat di tab ini.`);
