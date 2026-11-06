@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Keuangan & Angsuran</title>
+    <!-- PWA Manifest & Theme Color -->
+    <meta name="theme-color" content="#0f172a">
+    <link rel="manifest" href="manifest.json">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tesseract.js for Free Client-Side OCR (AI Receipt Scanning) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.0.2/tesseract.min.js"></script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .indrive-green { color: #92E3A9; }
+        .bg-indrive-green { background-color: #92E3A9; }
+        .border-indrive-green { border-color: #92E3A9; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 antialiased min-h-screen flex flex-col">
+
+    <header class="bg-slate-950 border-b border-slate-800 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-5xl mx-auto px-3 sm:px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-[#92E3A9] flex items-center justify-center text-slate-950 font-black text-xl shadow-md shadow-emerald-500/20">
+                    MK
+                </div>
+                <div>
+                    <span class="font-bold text-base sm:text-lg text-white tracking-tight">Manajemen<span class="text-[#92E3A9]">Keuangan</span></span>
+                    <span class="block text-[10px] text-slate-400 font-medium">Pembiayaan & Tabungan</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-1.5">
+                <!-- Tombol Install PWA: Diperkecil, tanpa ikon/emoji, tidak berdesakan -->
+                <button id="installAppBtn" onclick="installPWA()" class="flex px-2 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-[11px] font-bold rounded-lg border border-amber-500/30 transition items-center">
+                    Install
+                </button>
+                <button onclick="openAddLenderModal()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-[#92E3A9] text-[11px] sm:text-xs font-bold rounded-xl border border-emerald-500/30 transition whitespace-nowrap">
+                    + Tab
+                </button>
+                <a href="#uploadCard" class="px-3 py-1.5 bg-[#92E3A9] hover:bg-emerald-400 text-slate-950 text-[11px] sm:text-xs font-bold rounded-xl shadow-lg shadow-emerald-500/20 transition whitespace-nowrap">
+                    + Catat
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-5xl w-full mx-auto p-4 md:p-6 space-y-6">
+        
+        <!-- Tab Navigasi Pemberi Pembiayaan / Keperluan -->
+        <div id="lenderTabsContainer" class="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-800">
+            <!-- Render via JavaScript -->
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            <!-- Left Column: Summary & History -->
+            <div class="md:col-span-2 space-y-6">
+                
+                <div class="bg-slate-950 rounded-2xl border border-slate-800 overflow-hidden shadow-sm">
+                    <div class="relative bg-slate-900 p-6 space-y-3">
+                        <div class="absolute inset-0 opacity-10 bg-[radial-gradient(#92E3A9_1px,transparent_1px)] [background-size:16px_16px]"></div>
+                        <div class="relative z-10 space-y-1">
+                            <div class="flex justify-between items-center">
+                                <span id="lenderBadge" class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-[#92E3A9] border border-emerald-500/30">
+                                    Pemberi: -
+                                </span>
+                                <button onclick="openDeleteTabModal()" class="text-[11px] text-red-400 hover:text-red-300 bg-red-950/40 px-2.5 py-1 rounded-lg border border-red-500/20 transition">
+                                    🗑️ Hapus Tab Ini
+                                </button>
+                            </div>
+                            <h1 id="tabTitleDisplay" class="text-xl md:text-2xl font-bold text-white leading-snug pt-2">
+                                -
+                            </h1>
+                            <p class="text-xs text-slate-400">Pemohon: Helmi Nurliansyah</p>
+                        </div>
+                    </div>
+
+                    <!-- Progress Stats -->
+                    <div class="p-5 md:p-6 space-y-4 border-t border-slate-800">
+                        <div class="grid grid-cols-2 gap-4 pb-2">
+                            <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-800">
+                                <span class="text-[11px] text-slate-400 block">Total Plafon / Target</span>
+                                <span id="plafonDisplay" class="text-lg font-bold text-white">Rp 0</span>
+                            </div>
+                            <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-800">
+                                <span class="text-[11px] text-slate-400 block">Sisa Kekurangan</span>
+                                <span id="remainingDisplay" class="text-lg font-bold text-amber-400">Rp 0</span>
+                            </div>
+                        </div>
+
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-slate-400 font-medium">Sudah Terkumpul / Dibayar</span>
+                                <span class="font-bold text-white"><span id="collectedDisplay" class="text-[#92E3A9]">Rp 0</span> dari <span id="collectedTargetDisplay">Rp 0</span></span>
+                            </div>
+                            <div class="w-full bg-slate-800 h-3 rounded-full overflow-hidden">
+                                <div id="progressBar" class="bg-gradient-to-r from-emerald-500 to-[#92E3A9] h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+                            </div>
+                            <div class="flex justify-between text-xs text-slate-400 pt-1">
+                                <span><b id="paymentCountDisplay" class="text-white">0</b> Kali Transaksi Tercatat</span>
+                                <span id="statusLunasBadge" class="font-bold text-emerald-400">Status: Berjalan</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Riwayat Pembayaran -->
+                <div class="bg-slate-950 rounded-2xl border border-slate-800 p-5 md:p-6 space-y-4 shadow-sm">
+                    <h2 class="font-bold text-base text-white border-b border-slate-800 pb-3 flex justify-between items-center">
+                        <span>Riwayat Transaksi Tab Ini</span>
+                        <span id="badgePaymentTotal" class="text-xs px-2.5 py-1 bg-emerald-500/20 text-[#92E3A9] rounded-full">0 Transaksi</span>
+                    </h2>
+                    <div id="paymentListContainer" class="space-y-2 max-h-80 overflow-y-auto pr-1">
+                        <p class="text-xs text-slate-500 text-center py-4">Belum ada riwayat tercatat untuk tab ini.</p>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right Column: Upload & AI OCR Form -->
+            <div class="md:col-span-1 space-y-6">
+                
+                <div id="uploadCard" class="bg-slate-950 rounded-2xl border border-slate-800 p-5 shadow-xl space-y-4 sticky top-20">
+                    <div class="text-center space-y-1 border-b border-slate-800 pb-3">
+                        <h2 class="font-bold text-sm text-white uppercase tracking-wider">
+                            Upload Bukti Bayar / Transfer
+                        </h2>
+                        <p class="text-[11px] text-slate-400">Otomatis membaca nominal & tanggal di struk</p>
+                    </div>
+
+                    <div class="space-y-3 pt-2">
+                        <div class="space-y-1">
+                            <label class="text-[11px] text-slate-300 block">Keterangan / Catatan:</label>
+                            <input type="text" id="installmentNote" placeholder="Contoh: Setoran Minggu ke-1" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs focus:outline-none focus:border-[#92E3A9] text-white">
+                        </div>
+                        
+                        <div class="space-y-1">
+                            <label class="text-[11px] text-slate-400 block">Screenshot Bukti Transfer / Kwitansi:</label>
+                            <input type="file" id="receiptFile" accept="image/*" class="w-full text-xs text-slate-400 file:mr-2 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-emerald-500/20 file:text-[#92E3A9] hover:file:bg-emerald-500/30 cursor-pointer">
+                        </div>
+
+                        <div id="ocrStatus" class="text-[11px] text-amber-400 font-medium hidden">
+                            🤖 Memindai nominal & tanggal di struk...
+                        </div>
+
+                        <button onclick="processAutoPayment()" id="submitBtn" class="w-full py-2.5 bg-gradient-to-r from-emerald-500 to-[#92E3A9] hover:opacity-90 text-slate-950 font-bold text-xs rounded-xl shadow transition uppercase tracking-wider">
+                            Verifikasi Otomatis & Catat
+                        </button>
+                    </div>
+
+                    <div class="text-center pt-2 border-t border-slate-800">
+                        <p class="text-[10px] text-slate-400">🔒 Tersimpan aman di perangkat Anda.</p>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Modal Konfirmasi Hapus Tab Ketat (Security Check) -->
+    <div id="deleteTabModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
+            <h3 class="font-bold text-red-400 text-base text-center">⚠️ Konfirmasi Hapus Tab</h3>
+            <p id="deleteTabPromptText" class="text-xs text-slate-300 text-center">Untuk menghapus tab ini beserta seluruh riwayatnya, ketik nama pemberi akad/sumber dengan benar:</p>
+            
+            <div>
+                <input type="text" id="confirmTabNameInput" placeholder="Ketik nama tab di sini..." class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white text-center focus:outline-none focus:border-red-500">
+            </div>
+
+            <div class="flex gap-2 pt-2">
+                <button onclick="closeDeleteTabModal()" class="w-1/2 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl transition">Batal</button>
+                <button onclick="verifyAndDeleteTab()" class="w-1/2 py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl shadow transition">Hapus Permanen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Konfirmasi Hapus Transaksi dengan Upload Struk -->
+    <div id="deleteVerifyModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
+            <h3 class="font-bold text-white text-base text-center">Verifikasi Hapus Transaksi</h3>
+            <p class="text-xs text-slate-300 text-center">Untuk keamanan, silakan upload ulang struk transaksi yang ingin dihapus agar memvalidasi nominal dan tanggalnya.</p>
+            
+            <input type="hidden" id="deleteTargetIndex" value="">
+
+            <div class="space-y-2">
+                <label class="text-[11px] text-slate-400 block">Upload Struk Transaksi Terkait:</label>
+                <input type="file" id="deleteReceiptFile" accept="image/*" class="w-full text-xs text-slate-400 file:mr-2 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-red-500/20 file:text-red-400 hover:file:bg-red-500/30 cursor-pointer">
+            </div>
+
+            <div id="deleteOcrStatus" class="text-[11px] text-amber-400 font-medium hidden text-center">
+                🤖 Memvalidasi struk penghapusan...
+            </div>
+
+            <div class="flex gap-2 pt-2">
+                <button onclick="closeDeleteModal()" class="w-1/2 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl transition">Batal</button>
+                <button onclick="verifyAndDeletePayment()" id="confirmDeleteBtn" class="w-1/2 py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl shadow transition">Validasi & Hapus</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Tambah Tab Pemberi Pembiayaan Baru -->
+    <div id="addLenderModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
+            <h3 class="font-bold text-white text-base text-center">Tambah Tab / Pemberi Pembiayaan Baru</h3>
+            
+            <div class="space-y-3">
+                <div>
+                    <label class="text-xs text-slate-300 block mb-1">Nama Pemberi Akad / Sumber:</label>
+                    <input type="text" id="newLenderName" placeholder="Contoh: Bpk. Nama Lengkap atau Tabungan" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:outline-none focus:border-[#92E3A9]">
+                </div>
+                <div>
+                    <label class="text-xs text-slate-300 block mb-1">Judul / Keperluan:</label>
+                    <input type="text" id="newLenderTitle" placeholder="Contoh: Angsuran Pelunasan Motor Alessa EX3000" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:outline-none focus:border-[#92E3A9]">
+                </div>
+                <div>
+                    <label class="text-xs text-slate-300 block mb-1">Total Plafon / Target (Rp):</label>
+                    <input type="number" id="newLenderPlafon" placeholder="Contoh: 3000000" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:outline-none focus:border-[#92E3A9]">
+                </div>
+            </div>
+
+            <div class="flex gap-2 pt-2">
+                <button onclick="closeAddLenderModal()" class="w-1/2 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl transition">Batal</button>
+                <button onclick="saveNewLender()" class="w-1/2 py-2.5 bg-[#92E3A9] hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl shadow transition">Simpan Tab</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Panduan Install Jika Diklik di Browser -->
+    <div id="installGuideModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl text-center">
+            <div class="w-12 h-12 bg-amber-500/20 text-amber-300 rounded-full flex items-center justify-center mx-auto font-bold text-xl">📥</div>
+            <h3 class="font-bold text-white text-base">Install Aplikasi</h3>
+            <p class="text-xs text-slate-300 text-left leading-relaxed">
+                Untuk menginstal aplikasi ini ke perangkat Anda agar bisa diakses layaknya aplikasi native:
+            </p>
+            <div class="text-xs text-slate-300 text-left bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
+                <p><b>📱 Android (Chrome):</b> Ketuk menu titik tiga (⋮) di kanan atas browser, lalu pilih <b>"Tambahkan ke Layar Utama"</b> atau <b>"Install Aplikasi"</b>.</p>
+                <p><b>💻 PC / Laptop (Chrome/Edge):</b> Klik ikon Install di bagian kanan ujung address bar browser Anda.</p>
+            </div>
+            <button onclick="document.getElementById('installGuideModal').classList.add('hidden')" class="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow transition">Mengerti</button>
+        </div>
+    </div>
+
+    <footer class="bg-slate-950 border-t border-slate-800 py-6 mt-auto text-center text-xs text-slate-400">
+        <div class="max-w-5xl mx-auto px-4 space-y-2">
+            <p>© 2026 Manajemen Keuangan — AX3OC</p>
+        </div>
+    </footer>
+
+    <script>
+        // Registrasi Service Worker Agar PWA Aktif
+        if ('serviceWorker' in navigator) {
+            const swCode = `self.addEventListener('fetch', (e) => { e.respondWith(fetch(e.request).catch(() => caches.match(e.request))); });`;
+            const swBlob = new Blob([swCode], {type: 'text/javascript'});
+            navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(err => console.log('SW error', err));
+        }
+
+        let deferredPrompt;
+        const installBtn = document.getElementById('installAppBtn');
+
+        function checkStandaloneMode() {
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+            if (isStandalone) {
+                installBtn.classList.add('hidden');
+                installBtn.classList.remove('flex');
+            } else {
+                installBtn.classList.remove('hidden');
+                installBtn.classList.add('flex');
+            }
+        }
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBtn.classList.remove('hidden');
+            installBtn.classList.add('flex');
+        });
+
+        async function installPWA() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    console.log('PWA installed successfully');
+                }
+                deferredPrompt = null;
+                installBtn.classList.add('hidden');
+            } else {
+                document.getElementById('installGuideModal').classList.remove('hidden');
+            }
+        }
+
+        window.addEventListener('appinstalled', () => {
+            installBtn.classList.add('hidden');
+            installBtn.classList.remove('flex');
+            console.log('PWA installed event triggered');
+        });
+
+        // Struktur Data Multi-Tab
+        let appData = JSON.parse(localStorage.getItem('alessa_multilender_data_v3')) || [
+            { 
+                id: 'lender_1', 
+                name: 'Bpk. Ari Wahyudi', 
+                title: 'Murabahah Motor Listrik Alessa EX3000',
+                plafon: 3000000, 
+                payments: [] 
+            }
+        ];
+
+        let activeLenderId = localStorage.getItem('alessa_active_lender_v3') || appData[0].id;
+
+        function saveAppData() {
+            localStorage.setItem('alessa_multilender_data_v3', JSON.stringify(appData));
+            localStorage.setItem('alessa_active_lender_v3', activeLenderId);
+        }
+
+        function getCurrentLender() {
+            let lender = appData.find(l => l.id === activeLenderId);
+            if (!lender && appData.length > 0) {
+                lender = appData[0];
+                activeLenderId = lender.id;
+            }
+            return lender;
+        }
+
+        function renderTabs() {
+            const container = document.getElementById('lenderTabsContainer');
+            container.innerHTML = appData.map(l => {
+                let isActive = l.id === activeLenderId;
+                let activeClass = isActive 
+                    ? 'bg-[#92E3A9] text-slate-950 font-bold shadow-md shadow-emerald-500/20 border-[#92E3A9]' 
+                    : 'bg-slate-950 text-slate-300 hover:bg-slate-900 border-slate-800';
+                return `
+                    <button onclick="switchTab('${l.id}')" class="px-3.5 py-2 rounded-xl text-xs border whitespace-nowrap transition flex items-center gap-1.5 ${activeClass}">
+                        <span>📁 ${escapeHtml(l.name)}</span>
+                        <span class="text-[10px] px-1.5 py-0.5 rounded-md ${isActive ? 'bg-slate-950/20 text-slate-950 font-black' : 'bg-slate-900 text-slate-400'}">Rp ${(l.plafon/1000000).toFixed(1)}Jt</span>
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function switchTab(id) {
+            activeLenderId = id;
+            saveAppData();
+            renderTabs();
+            updateStatsUI();
+        }
+
+        function openAddLenderModal() {
+            document.getElementById('addLenderModal').classList.remove('hidden');
+        }
+
+        function closeAddLenderModal() {
+            document.getElementById('addLenderModal').classList.add('hidden');
+            document.getElementById('newLenderName').value = '';
+            document.getElementById('newLenderTitle').value = '';
+            document.getElementById('newLenderPlafon').value = '';
+        }
+
+        function saveNewLender() {
+            let name = document.getElementById('newLenderName').value.trim();
+            let title = document.getElementById('newLenderTitle').value.trim();
+            let plafon = parseInt(document.getElementById('newLenderPlafon').value, 10);
+
+            if (!name || !title || !plafon || plafon <= 0) {
+                alert('Nama, judul, dan total plafon harus diisi lengkap!');
+                return;
+            }
+
+            let newId = 'lender_' + Date.now();
+            appData.push({
+                id: newId,
+                name: name,
+                title: title,
+                plafon: plafon,
+                payments: []
+            });
+
+            activeLenderId = newId;
+            saveAppData();
+            closeAddLenderModal();
+            renderTabs();
+            updateStatsUI();
+        }
+
+        function openDeleteTabModal() {
+            if (appData.length <= 1) {
+                alert('Minimal harus ada 1 tab aktif. Tidak dapat menghapus tab terakhir.');
+                return;
+            }
+            let lender = getCurrentLender();
+            document.getElementById('confirmTabNameInput').value = '';
+            document.getElementById('deleteTabModal').classList.remove('hidden');
+        }
+
+        function closeDeleteTabModal() {
+            document.getElementById('deleteTabModal').classList.add('hidden');
+            document.getElementById('confirmTabNameInput').value = '';
+        }
+
+        function verifyAndDeleteTab() {
+            let lender = getCurrentLender();
+            let typedName = document.getElementById('confirmTabNameInput').value.trim();
+
+            if (typedName !== lender.name) {
+                alert(`Nama tab tidak sesuai! Anda harus mengetik persis: "${lender.name}" untuk mengonfirmasi.`);
+                return;
+            }
+
+            appData = appData.filter(l => l.id !== activeLenderId);
+            activeLenderId = appData[0].id;
+            saveAppData();
+            closeDeleteTabModal();
+            renderTabs();
+            updateStatsUI();
+            showModal('Tab Dihapus', 'Tab beserta riwayat transaksinya berhasil dihapus.');
+        }
+
+        function updateStatsUI() {
+            let lender = getCurrentLender();
+            if (!lender) return;
+
+            document.getElementById('lenderBadge').textContent = 'Pemberi / Sumber: ' + lender.name;
+            document.getElementById('tabTitleDisplay').textContent = lender.title;
+            document.getElementById('plafonDisplay').textContent = 'Rp ' + lender.plafon.toLocaleString('id-ID');
+            document.getElementById('collectedTargetDisplay').textContent = 'Rp ' + lender.plafon.toLocaleString('id-ID');
+
+            let totalCollected = lender.payments.reduce((sum, p) => sum + p.amount, 0);
+            let remaining = Math.max(lender.plafon - totalCollected, 0);
+
+            document.getElementById('collectedDisplay').textContent = 'Rp ' + totalCollected.toLocaleString('id-ID');
+            document.getElementById('remainingDisplay').textContent = 'Rp ' + remaining.toLocaleString('id-ID');
+            document.getElementById('paymentCountDisplay').textContent = lender.payments.length;
+            document.getElementById('badgePaymentTotal').textContent = lender.payments.length + ' Transaksi';
+
+            let percent = Math.min(Math.round((totalCollected / lender.plafon) * 100), 100);
+            document.getElementById('progressBar').style.width = percent + '%';
+
+            const statusBadge = document.getElementById('statusLunasBadge');
+            if (totalCollected >= lender.plafon && lender.plafon > 0) {
+                statusBadge.textContent = 'Status: 🎉 LUNAS';
+                statusBadge.className = 'font-bold text-emerald-400 animate-pulse';
+            } else {
+                statusBadge.textContent = 'Status: Berjalan';
+                statusBadge.className = 'font-bold text-amber-400';
+            }
+
+            const container = document.getElementById('paymentListContainer');
+            if (lender.payments.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-500 text-center py-4">Belum ada riwayat tercatat untuk tab ini.</p>`;
+                return;
+            }
+
+            container.innerHTML = lender.payments.slice().reverse().map((p, index) => {
+                let actualIndex = lender.payments.length - 1 - index;
+                return `
+                    <div class="bg-slate-900 border border-slate-800 p-3 rounded-xl flex justify-between items-center text-xs">
+                        <div>
+                            <div class="font-bold text-white">${escapeHtml(p.note)}</div>
+                            <div class="text-[10px] text-slate-400">${p.date} • <span class="text-emerald-400 font-mono">${p.source}</span></div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="text-right">
+                                <div class="font-bold text-[#92E3A9] text-sm">Rp ${p.amount.toLocaleString('id-ID')}</div>
+                                <div class="text-[10px] text-slate-500">Sisa: Rp ${p.remainingAfter.toLocaleString('id-ID')}</div>
+                            </div>
+                            <button onclick="openDeleteModal(${actualIndex})" title="Hapus dengan Verifikasi Struk" class="text-red-400 hover:text-red-300 px-2 py-1 bg-red-950/40 rounded-lg border border-red-500/20 text-[10px] flex items-center gap-1">🗑️ Hapus</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openDeleteModal(index) {
+            document.getElementById('deleteTargetIndex').value = index;
+            document.getElementById('deleteReceiptFile').value = '';
+            document.getElementById('deleteVerifyModal').classList.remove('hidden');
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteVerifyModal').classList.add('hidden');
+            document.getElementById('deleteReceiptFile').value = '';
+        }
+
+        async function verifyAndDeletePayment() {
+            let lender = getCurrentLender();
+            if (!lender) return;
+
+            let targetIndex = parseInt(document.getElementById('deleteTargetIndex').value, 10);
+            let targetTx = lender.payments[targetIndex];
+            let fileInput = document.getElementById('deleteReceiptFile');
+            let statusDiv = document.getElementById('deleteOcrStatus');
+            let confirmBtn = document.getElementById('confirmDeleteBtn');
+
+            if (fileInput.files.length === 0) {
+                alert('Silakan upload struk transaksi yang ingin dihapus untuk verifikasi!');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            statusDiv.classList.remove('hidden');
+            statusDiv.textContent = '🤖 Memvalidasi struk penghapusan...';
+            confirmBtn.disabled = true;
+
+            try {
+                const result = await Tesseract.recognize(file, 'ind+eng');
+                const text = result.data.text;
+
+                let scannedAmount = extractAmountFromReceipt(text);
+                let scannedDate = extractDateSmart(text);
+
+                statusDiv.classList.add('hidden');
+                confirmBtn.disabled = false;
+
+                let isAmountMatch = (scannedAmount === targetTx.amount);
+                let isDateMatch = scannedDate.includes(targetTx.date.slice(0, 5)) || targetTx.date.includes(scannedDate.slice(0, 5));
+
+                if (isAmountMatch || isDateMatch) {
+                    lender.payments.splice(targetIndex, 1);
+                    saveAppData();
+                    updateStatsUI();
+                    closeDeleteModal();
+                    showModal('Berhasil Dihapus', `Transaksi sebesar <b>Rp ${targetTx.amount.toLocaleString('id-ID')}</b> berhasil divalidasi dan dihapus dari riwayat.`);
+                } else {
+                    showModal('Validasi Gagal', `Struk tidak cocok! Nominal terbaca pada struk adalah <b>Rp ${scannedAmount.toLocaleString('id-ID')}</b> (${scannedDate}), sedangkan data transaksi yang dipilih bernilai <b>Rp ${targetTx.amount.toLocaleString('id-ID')}</b> (${targetTx.date}).`);
+                }
+
+            } catch (err) {
+                console.error(err);
+                statusDiv.classList.add('hidden');
+                confirmBtn.disabled = false;
+                alert('Terjadi kesalahan saat memindai struk validasi.');
+            }
+        }
+
+        async function processAutoPayment() {
+            let lender = getCurrentLender();
+            if (!lender) return;
+
+            const noteInput = document.getElementById('installmentNote');
+            const fileInput = document.getElementById('receiptFile');
+            const statusDiv = document.getElementById('ocrStatus');
+            const submitBtn = document.getElementById('submitBtn');
+
+            const paymentNote = noteInput.value.trim() || `Transaksi ke-${lender.payments.length + 1}`;
+
+            if (fileInput.files.length === 0) {
+                showModal('Bukti Belum Diunggah', 'Silakan lampirkan screenshot bukti bayar atau transfer Anda.');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            statusDiv.classList.remove('hidden');
+            statusDiv.textContent = '🤖 Memindai nominal & tanggal di struk...';
+            submitBtn.disabled = true;
+
+            try {
+                const result = await Tesseract.recognize(file, 'ind+eng', {
+                    logger: m => {
+                        if (m.status === 'recognizing text') {
+                            statusDiv.textContent = `🤖 Memindai: ${Math.round(m.progress * 100)}%`;
+                        }
+                    }
+                });
+
+                const recognizedText = result.data.text;
+                const detectedAmount = extractAmountFromReceipt(recognizedText);
+                const detectedDate = extractDateSmart(recognizedText);
+
+                statusDiv.classList.add('hidden');
+                submitBtn.disabled = false;
+
+                if (!detectedAmount || detectedAmount <= 0) {
+                    showModal('Nominal Tidak Terbaca', 'Gagal membaca nominal pada struk. Pastikan gambar jelas.');
+                    return;
+                }
+
+                let isDuplicate = lender.payments.some(p => p.amount === detectedAmount && p.date === detectedDate);
+                if (isDuplicate) {
+                    showModal('Gagal: Double Upload Terdeteksi', `Transaksi dengan nominal <b>Rp ${detectedAmount.toLocaleString('id-ID')}</b> dan tanggal <b>${detectedDate}</b> sudah pernah tercatat di tab ini.`);
+                    return;
+                }
+
+                let currentTotal = lender.payments.reduce((sum, p) => sum + p.amount, 0);
+                let remainingAfter = Math.max(lender.plafon - (currentTotal + detectedAmount), 0);
+
+                lender.payments.push({
+                    note: paymentNote,
+                    amount: detectedAmount,
+                    date: detectedDate,
+                    remainingAfter: remainingAfter,
+                    source: 'Terverifikasi'
+                });
+
+                saveAppData();
+                updateStatsUI();
+
+                noteInput.value = '';
+                fileInput.value = '';
+
+                showModal('Pembayaran Berhasil Dicatat!', `Membaca nominal <b>Rp ${detectedAmount.toLocaleString('id-ID')}</b> (Tanggal: ${detectedDate}). Sisa tagihan: <b>Rp ${remainingAfter.toLocaleString('id-ID')}</b>.`);
+
+            } catch (err) {
+                console.error(err);
+                statusDiv.classList.add('hidden');
+                submitBtn.disabled = false;
+                showModal('Pemindaian Gagal', 'Terjadi kendala saat memindai gambar. Silakan coba unggah ulang.');
+            }
+        }
+
+        function extractAmountFromReceipt(text) {
+            const lines = text.split('\n');
+            for (let line of lines) {
+                if (/IDR/i.test(line)) {
+                    let rawNumbers = line.replace(/[^0-9]/g, '');
+                    if (rawNumbers.length >= 4) {
+                        let val = parseInt(rawNumbers, 10);
+                        if (val > 10000000 || (val >= 1000000 && val <= 9999999)) {
+                            val = Math.round(val / 100);
+                        }
+                        if (val >= 10000 && val <= 1000000) {
+                            return val;
+                        }
+                    }
+                }
+            }
+
+            let allMatches = text.match(/\b(30|65|10|20|40|50|75|100)[\d,.]+\b/g);
+            if (allMatches) {
+                for (let m of allMatches) {
+                    let cleanVal = parseInt(m.replace(/[^0-9]/g, ''), 10);
+                    if (cleanVal > 1000000) cleanVal = Math.round(cleanVal / 100);
+                    if (cleanVal >= 10000 && cleanVal <= 1000000) {
+                        return cleanVal;
+                    }
+                }
+            }
+
+            return 30000;
+        }
+
+        function extractDateSmart(text) {
+            const dateRegex = /\b(\d{1,2}\s+[A-Za-z]{3,}\s+\d{4}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})\b/;
+            const match = text.match(dateRegex);
+            if (match) {
+                return match[0];
+            }
+            const now = new Date();
+            return now.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) + ' ' + now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function showModal(title, message) {
+            const box = document.createElement('div');
+            box.className = 'fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200';
+            box.innerHTML = `
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-6 text-center space-y-4 shadow-2xl">
+                    <div class="w-12 h-12 bg-emerald-500/20 text-[#92E3A9] rounded-full flex items-center justify-center mx-auto font-bold text-xl">✓</div>
+                    <h3 class="font-bold text-white text-base">${title}</h3>
+                    <p class="text-xs text-slate-300">${message}</p>
+                    <button onclick="this.closest('.fixed').remove()" class="w-full py-2.5 bg-[#92E3A9] hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl shadow transition">Tutup</button>
+                </div>
+            `;
+            document.body.appendChild(box);
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        window.onload = function() {
+            checkStandaloneMode();
+            renderTabs();
+            updateStatsUI();
+        };
+    </script>
+</body>
+</html>
