@@ -26,7 +26,7 @@
                     H
                 </div>
                 <div>
-                    <span class="font-bold text-lg text-white tracking-tight">Cicilan<span class="text-[#92E3A9]">Alessa</span></span>
+                    <span class="font-bold text-lg text-white tracking-tight">KartuKontrol<span class="text-[#92E3A9]">Alessa</span></span>
                     <span class="block text-[10px] text-slate-400 font-medium">Akad Pembiayaan Syariah • Alessa EX3000</span>
                 </div>
             </div>
@@ -107,13 +107,13 @@
                     <h2 class="font-bold text-sm text-white uppercase tracking-wider">
                         Upload Bukti Bayar / Transfer
                     </h2>
-                    <p class="text-[11px] text-slate-400">AI otomatis membaca nominal & tanggal pembayaran</p>
+                    <p class="text-[11px] text-slate-400">AI otomatis membaca nominal & tanggal di struk</p>
                 </div>
 
                 <div class="space-y-3 pt-2">
                     <div class="space-y-1">
                         <label class="text-[11px] text-slate-300 block">Keterangan / Cicilan Ke-:</label>
-                        <input type="text" id="installmentNote" placeholder="Contoh: Cicilan Minggu ke-1 / Bulanan 1" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs focus:outline-none focus:border-[#92E3A9] text-white">
+                        <input type="text" id="installmentNote" placeholder="Contoh: Cicilan Minggu ke-1" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs focus:outline-none focus:border-[#92E3A9] text-white">
                     </div>
                     
                     <div class="space-y-1">
@@ -122,7 +122,7 @@
                     </div>
 
                     <div id="ocrStatus" class="text-[11px] text-amber-400 font-medium hidden">
-                        🤖 AI sedang memindai bukti bayar...
+                        🤖 AI sedang memindai struk...
                     </div>
 
                     <button onclick="processAutoPayment()" id="submitBtn" class="w-full py-2.5 bg-gradient-to-r from-emerald-500 to-[#92E3A9] hover:opacity-90 text-slate-950 font-bold text-xs rounded-xl shadow transition uppercase tracking-wider">
@@ -131,7 +131,7 @@
                 </div>
 
                 <div class="text-center pt-2 border-t border-slate-800">
-                    <p class="text-[10px] text-slate-400">🔒 Data tersimpan otomatis di perangkat Anda sebagai kartu kontrol sah.</p>
+                    <p class="text-[10px] text-slate-400">🔒 Data tersimpan otomatis di perangkat Anda.</p>
                 </div>
             </div>
 
@@ -166,7 +166,6 @@
             let percent = Math.min(Math.round((totalCollected / targetAmount) * 100), 100);
             document.getElementById('progressBar').style.width = percent + '%';
 
-            // Render payment list
             const container = document.getElementById('paymentListContainer');
             if (paymentsData.length === 0) {
                 container.innerHTML = `<p class="text-xs text-slate-500 text-center py-4">Belum ada riwayat pembayaran tercatat.</p>`;
@@ -202,7 +201,7 @@
 
             const file = fileInput.files[0];
             statusDiv.classList.remove('hidden');
-            statusDiv.textContent = '🤖 AI sedang memindai nominal pada bukti bayar...';
+            statusDiv.textContent = '🤖 AI sedang memindai struk...';
             submitBtn.disabled = true;
 
             try {
@@ -217,7 +216,8 @@
                 const recognizedText = result.data.text;
                 console.log("OCR Result:", recognizedText);
 
-                const detectedAmount = extractAmountFromText(recognizedText);
+                const detectedAmount = extractAmountSmart(recognizedText);
+                const detectedDate = extractDateSmart(recognizedText);
 
                 statusDiv.classList.add('hidden');
                 submitBtn.disabled = false;
@@ -230,15 +230,12 @@
                 let currentTotal = paymentsData.reduce((sum, p) => sum + p.amount, 0);
                 let remainingAfter = Math.max(targetAmount - (currentTotal + detectedAmount), 0);
 
-                const now = new Date();
-                const dateStr = now.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) + ' ' + now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-
                 paymentsData.push({
                     note: paymentNote,
                     amount: detectedAmount,
-                    date: dateStr,
+                    date: detectedDate,
                     remainingAfter: remainingAfter,
-                    source: 'AI OCR Terverifikasi'
+                    source: 'AI OCR Struk'
                 });
 
                 localStorage.setItem('alessa_payments_list', JSON.stringify(paymentsData));
@@ -247,7 +244,7 @@
                 noteInput.value = '';
                 fileInput.value = '';
 
-                showModal('Pembayaran Tercatat!', `AI berhasil memverifikasi sebesar <b>Rp ${detectedAmount.toLocaleString('id-ID')}</b>. Sisa tagihan Anda saat ini menjadi <b>Rp ${remainingAfter.toLocaleString('id-ID')}</b>.`);
+                showModal('Pembayaran Tercatat!', `AI berhasil membaca nominal <b>Rp ${detectedAmount.toLocaleString('id-ID')}</b> (Tanggal Struk: ${detectedDate}). Sisa tagihan menjadi <b>Rp ${remainingAfter.toLocaleString('id-ID')}</b>.`);
 
             } catch (err) {
                 console.error(err);
@@ -257,13 +254,52 @@
             }
         }
 
-        function extractAmountFromText(text) {
-            const cleanText = text.replace(/Rp|\.|IDR/gi, '');
-            const numbers = cleanText.match(/\d+/g);
+        // Fungsi pintar menyaring nominal struk (mengabaikan nomor rekening/PAN yang panjang)
+        function extractAmountSmart(text) {
+            // Cari pola angka yang berdekatan dengan IDR, Rp, atau format ribuan dengan titik/koma (misal 30,000.00 atau 30.000)
+            const lines = text.split('\n');
+            let candidateAmounts = [];
+
+            for (let line of lines) {
+                // Jika baris mengandung kata kunci nominal atau IDR
+                if (/IDR|Rp|00\b/i.test(line)) {
+                    // Ambil angka-angka di baris tersebut
+                    let cleaned = line.replace(/Rp|IDR|,|\./gi, '');
+                    let matches = cleaned.match(/\d+/g);
+                    if (matches) {
+                        for (let m of matches) {
+                            let val = parseInt(m, 10);
+                            // Filter nilai cicilan yang wajar (antara 10 ribu sampai 3 juta)
+                            if (val >= 10000 && val <= 3000000) {
+                                candidateAmounts.push(val);
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (candidateAmounts.length > 0) {
+                return candidateAmounts[0]; // Ambil kandidat pertama yang paling akurat dari baris nominal
+            }
+
+            // Fallback cadangan jika format teks berbeda
+            const numbers = text.replace(/Rp|\.|IDR/gi, '').match(/\d+/g);
             if (!numbers) return 0;
-            const validNumbers = numbers.map(n => parseInt(n, 10)).filter(n => n >= 1000);
-            if (validNumbers.length === 0) return 0;
-            return Math.max(...validNumbers);
+            const valid = numbers.map(n => parseInt(n, 10)).filter(n => n >= 10000 && n <= 3000000);
+            return valid.length > 0 ? valid[0] : 0;
+        }
+
+        // Fungsi pintar membaca tanggal dari struk
+        function extractDateSmart(text) {
+            // Cari pola tanggal seperti 05 Nov 2026 atau 05/11/2026
+            const dateRegex = /\b(\d{1,2}\s+[A-Za-z]{3,}\s+\d{4}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})\b/;
+            const match = text.match(dateRegex);
+            if (match) {
+                return match[0];
+            }
+            // Jika tidak ketemu di struk, gunakan tanggal hari ini
+            const now = new Date();
+            return now.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) + ' ' + now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
         }
 
         function resetTestData() {
