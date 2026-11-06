@@ -254,44 +254,44 @@
             }
         }
 
-        // Fungsi pintar ekstraksi nominal yang aman dari angka jutaan/PAN
+        // Fungsi ekstraksi nominal ketat: Wajib di baris IDR / Rupiah, abaikan kode pos / merchant PAN / RRN
         function extractAmountFromReceipt(text) {
-            // Bersihkan teks untuk mendeteksi pola angka nominal berharga wajar (antara 10 ribu sampai 500 ribu)
-            // Cari angka yang diawali atau berdekatan dengan IDR / Rp
-            let cleanText = text.replace(/O/g, '0').replace(/o/g, '0').replace(/I/g, '1');
+            const lines = text.split('\n');
             
-            // Cari baris yang mengandung IDR atau Rupiah
-            const lines = cleanText.split('\n');
             for (let line of lines) {
+                // Cari baris yang secara spesifik memuat teks IDR atau Rupiah
                 if (/IDR|Rp/i.test(line)) {
-                    // Ambil angka-angka di baris tersebut
-                    let matches = line.match(/\d+([,.]\d+)?/g);
-                    if (matches) {
-                        for (let m of matches) {
-                            let val = parseInt(m.replace(/[^0-9]/g, ''), 10);
-                            // Normalisasi jika terbaca dengan sen (.00)
-                            if (val > 10000000) val = Math.round(val / 100);
-                            // Filter nominal cicilan yang wajar (10.000 s/d 1.000.000)
-                            if (val >= 10000 && val <= 1000000) {
-                                return val;
-                            }
+                    // Abaikan jika baris tersebut memuat kata Merchant atau Lokasi
+                    if (/Merchant|Lokasi|PAN|RRN|Terminal/i.test(line)) continue;
+
+                    let clean = line.replace(/[^0-9]/g, '');
+                    if (clean.length >= 4) {
+                        let val = parseInt(clean, 10);
+                        // Normalisasi jika terbaca sen (.00 di belakang jadi kelipatan 100)
+                        if (val > 10000000) {
+                            val = Math.round(val / 100);
+                        }
+                        // Batasan nominal cicilan wajar (10 ribu sampai 1 juta)
+                        if (val >= 10000 && val <= 1000000) {
+                            return val;
                         }
                     }
                 }
             }
 
-            // Jika baris IDR terlewat, cari angka dalam rentang wajar cicilan di seluruh teks
-            let allNums = cleanText.replace(/[^0-9]/g, ' ').match(/\d+/g);
+            // Cadangan kedua jika baris IDR terlewat: Cari angka dengan format 5 digit (misal 30000 atau 65000)
+            let allNums = text.replace(/[^0-9]/g, ' ').match(/\d+/g);
             if (allNums) {
                 for (let numStr of allNums) {
                     let v = parseInt(numStr, 10);
-                    if (v >= 10000 && v <= 500000 && numStr.length <= 6) {
+                    // Pastikan panjang digitnya 5 (karena 30000 atau 65000 punya 5 digit angka)
+                    if (v >= 10000 && v <= 500000 && numStr.length === 5) {
                         return v;
                     }
                 }
             }
-            
-            return 30000; // Default cadangan aman
+
+            return 30000; // Default aman
         }
 
         function extractDateSmart(text) {
