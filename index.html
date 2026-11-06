@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kartu Angsuran - Pelunasan Alessa EX3000</title>
+    <title>Kartu Kontrol Keuangan & Angsuran</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Tesseract.js for Free Client-Side OCR (AI Receipt Scanning) -->
@@ -26,16 +26,16 @@
                     H
                 </div>
                 <div>
-                    <span class="font-bold text-lg text-white tracking-tight">Cicilan<span class="text-[#92E3A9]">Alessa</span></span>
-                    <span class="block text-[10px] text-slate-400 font-medium">Akad Pembiayaan Syariah • Alessa EX3000</span>
+                    <span class="font-bold text-lg text-white tracking-tight">Kontrol<span class="text-[#92E3A9]">Keuangan</span></span>
+                    <span class="block text-[10px] text-slate-400 font-medium">Manajemen Pembiayaan & Tabungan Pribadi</span>
                 </div>
             </div>
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2">
                 <button onclick="openAddLenderModal()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-[#92E3A9] text-xs font-bold rounded-xl border border-emerald-500/30 transition">
-                    + Tambah Pemberi Akad
+                    + Tambah Tab
                 </button>
-                <a href="#uploadCard" class="px-4 py-2 bg-[#92E3A9] hover:bg-emerald-400 text-slate-950 text-xs font-bold rounded-xl shadow-lg shadow-emerald-500/20 transition">
-                    + Catat Pembayaran
+                <a href="#uploadCard" class="px-3.5 py-2 bg-[#92E3A9] hover:bg-emerald-400 text-slate-950 text-xs font-bold rounded-xl shadow-lg shadow-emerald-500/20 transition">
+                    + Catat
                 </a>
             </div>
         </div>
@@ -43,7 +43,7 @@
 
     <main class="flex-1 max-w-5xl w-full mx-auto p-4 md:p-6 space-y-6">
         
-        <!-- Tab Navigasi Pemberi Pembiayaan (Seperti Tab Sheet Excel) -->
+        <!-- Tab Navigasi Pemberi Pembiayaan / Keperluan -->
         <div id="lenderTabsContainer" class="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-800">
             <!-- Render via JavaScript -->
         </div>
@@ -56,16 +56,19 @@
                 <div class="bg-slate-950 rounded-2xl border border-slate-800 overflow-hidden shadow-sm">
                     <div class="relative bg-slate-900 p-6 space-y-3">
                         <div class="absolute inset-0 opacity-10 bg-[radial-gradient(#92E3A9_1px,transparent_1px)] [background-size:16px_16px]"></div>
-                        <div class="relative z-10 space-y-1 flex justify-between items-start">
-                            <div>
+                        <div class="relative z-10 space-y-1">
+                            <div class="flex justify-between items-center">
                                 <span id="lenderBadge" class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-[#92E3A9] border border-emerald-500/30">
-                                    Pemberi Pembiayaan: -
+                                    Pemberi: -
                                 </span>
-                                <h1 class="text-xl md:text-2xl font-bold text-white leading-snug pt-2">
-                                    Angsuran Pelunasan Motor Listrik Alessa EX3000
-                                </h1>
-                                <p class="text-xs text-slate-400">Pemohon: Helmi Nurliansyah (Pabrik Kecap Merak / PT Weharima)</p>
+                                <button onclick="deleteCurrentTab()" class="text-[11px] text-red-400 hover:text-red-300 bg-red-950/40 px-2.5 py-1 rounded-lg border border-red-500/20 transition">
+                                    🗑️ Hapus Tab Ini
+                                </button>
                             </div>
+                            <h1 id="tabTitleDisplay" class="text-xl md:text-2xl font-bold text-white leading-snug pt-2">
+                                -
+                            </h1>
+                            <p class="text-xs text-slate-400">Pemohon: Helmi Nurliansyah (Pabrik Kecap Merak / PT Weharima)</p>
                         </div>
                     </div>
 
@@ -73,7 +76,7 @@
                     <div class="p-5 md:p-6 space-y-4 border-t border-slate-800">
                         <div class="grid grid-cols-2 gap-4 pb-2">
                             <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-800">
-                                <span class="text-[11px] text-slate-400 block">Total Plafon Akad</span>
+                                <span class="text-[11px] text-slate-400 block">Total Plafon / Target</span>
                                 <span id="plafonDisplay" class="text-lg font-bold text-white">Rp 0</span>
                             </div>
                             <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-800">
@@ -84,15 +87,15 @@
 
                         <div class="space-y-2">
                             <div class="flex justify-between text-sm">
-                                <span class="text-slate-400 font-medium">Sudah Dibayar</span>
+                                <span class="text-slate-400 font-medium">Sudah Terkumpul / Dibayar</span>
                                 <span class="font-bold text-white"><span id="collectedDisplay" class="text-[#92E3A9]">Rp 0</span> dari <span id="collectedTargetDisplay">Rp 0</span></span>
                             </div>
                             <div class="w-full bg-slate-800 h-3 rounded-full overflow-hidden">
                                 <div id="progressBar" class="bg-gradient-to-r from-emerald-500 to-[#92E3A9] h-full rounded-full transition-all duration-500" style="width: 0%"></div>
                             </div>
                             <div class="flex justify-between text-xs text-slate-400 pt-1">
-                                <span><b id="paymentCountDisplay" class="text-white">0</b> Kali Pembayaran Tercatat</span>
-                                <span>Target Lunas: <b>Mei 2027</b></span>
+                                <span><b id="paymentCountDisplay" class="text-white">0</b> Kali Transaksi Tercatat</span>
+                                <span id="statusLunasBadge" class="font-bold text-emerald-400">Status: Berjalan</span>
                             </div>
                         </div>
                     </div>
@@ -101,11 +104,11 @@
                 <!-- Riwayat Pembayaran -->
                 <div class="bg-slate-950 rounded-2xl border border-slate-800 p-5 md:p-6 space-y-4 shadow-sm">
                     <h2 class="font-bold text-base text-white border-b border-slate-800 pb-3 flex justify-between items-center">
-                        <span>Riwayat Angsuran</span>
+                        <span>Riwayat Transaksi Tab Ini</span>
                         <span id="badgePaymentTotal" class="text-xs px-2.5 py-1 bg-emerald-500/20 text-[#92E3A9] rounded-full">0 Transaksi</span>
                     </h2>
                     <div id="paymentListContainer" class="space-y-2 max-h-80 overflow-y-auto pr-1">
-                        <p class="text-xs text-slate-500 text-center py-4">Belum ada riwayat pembayaran tercatat.</p>
+                        <p class="text-xs text-slate-500 text-center py-4">Belum ada riwayat tercatat untuk tab ini.</p>
                     </div>
                 </div>
 
@@ -124,8 +127,8 @@
 
                     <div class="space-y-3 pt-2">
                         <div class="space-y-1">
-                            <label class="text-[11px] text-slate-300 block">Keterangan / Cicilan Ke-:</label>
-                            <input type="text" id="installmentNote" placeholder="Contoh: Cicilan Minggu ke-1" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs focus:outline-none focus:border-[#92E3A9] text-white">
+                            <label class="text-[11px] text-slate-300 block">Keterangan / Catatan:</label>
+                            <input type="text" id="installmentNote" placeholder="Contoh: Setoran Minggu ke-1" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs focus:outline-none focus:border-[#92E3A9] text-white">
                         </div>
                         
                         <div class="space-y-1">
@@ -153,18 +156,22 @@
 
     </main>
 
-    <!-- Modal Tambah Pemberi Pembiayaan Baru -->
+    <!-- Modal Tambah Tab Pemberi Pembiayaan Baru -->
     <div id="addLenderModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
-            <h3 class="font-bold text-white text-base text-center">Tambah Pemberi Pembiayaan Baru</h3>
+            <h3 class="font-bold text-white text-base text-center">Tambah Tab / Pemberi Pembiayaan Baru</h3>
             
             <div class="space-y-3">
                 <div>
-                    <label class="text-xs text-slate-300 block mb-1">Nama Pemberi Akad / Pembiayaan:</label>
-                    <input type="text" id="newLenderName" placeholder="Contoh: Bpk. Budi" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:outline-none focus:border-[#92E3A9]">
+                    <label class="text-xs text-slate-300 block mb-1">Nama Pemberi Akad / Sumber:</label>
+                    <input type="text" id="newLenderName" placeholder="Contoh: Bpk. Ari Wahyudi atau Tabungan" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:outline-none focus:border-[#92E3A9]">
                 </div>
                 <div>
-                    <label class="text-xs text-slate-300 block mb-1">Total Plafon Akad (Rp):</label>
+                    <label class="text-xs text-slate-300 block mb-1">Judul / Keperluan Kartu Kontrol:</label>
+                    <input type="text" id="newLenderTitle" placeholder="Contoh: Angsuran Pelunasan Motor Alessa EX3000" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:outline-none focus:border-[#92E3A9]">
+                </div>
+                <div>
+                    <label class="text-xs text-slate-300 block mb-1">Total Plafon / Target (Rp):</label>
                     <input type="number" id="newLenderPlafon" placeholder="Contoh: 3000000" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:outline-none focus:border-[#92E3A9]">
                 </div>
             </div>
@@ -178,21 +185,27 @@
 
     <footer class="bg-slate-950 border-t border-slate-800 py-6 mt-auto text-center text-xs text-slate-400">
         <div class="max-w-5xl mx-auto px-4 space-y-2">
-            <p>© 2026 cicilan Alessa EX3000 — AX3OC</p>
+            <p>© 2026 Kontrol Keuangan — AX3OC</p>
         </div>
     </footer>
 
     <script>
-        // Struktur Data Multi-Tab Pemberi Pembiayaan
-        let appData = JSON.parse(localStorage.getItem('alessa_multilender_data')) || [
-            { id: 'lender_1', name: 'Bpk. Ari Wahyudi', plafon: 3000000, payments: [] }
+        // Struktur Data Multi-Tab dengan Kustomisasi Judul
+        let appData = JSON.parse(localStorage.getItem('alessa_multilender_data_v2')) || [
+            { 
+                id: 'lender_1', 
+                name: 'Bpk. Ari Wahyudi', 
+                title: 'Angsuran Pelunasan Motor Listrik Alessa EX3000',
+                plafon: 3000000, 
+                payments: [] 
+            }
         ];
 
-        let activeLenderId = localStorage.getItem('alessa_active_lender') || appData[0].id;
+        let activeLenderId = localStorage.getItem('alessa_active_lender_v2') || appData[0].id;
 
         function saveAppData() {
-            localStorage.setItem('alessa_multilender_data', JSON.stringify(appData));
-            localStorage.setItem('alessa_active_lender', activeLenderId);
+            localStorage.setItem('alessa_multilender_data_v2', JSON.stringify(appData));
+            localStorage.setItem('alessa_active_lender_v2', activeLenderId);
         }
 
         function getCurrentLender() {
@@ -234,15 +247,17 @@
         function closeAddLenderModal() {
             document.getElementById('addLenderModal').classList.add('hidden');
             document.getElementById('newLenderName').value = '';
+            document.getElementById('newLenderTitle').value = '';
             document.getElementById('newLenderPlafon').value = '';
         }
 
         function saveNewLender() {
             let name = document.getElementById('newLenderName').value.trim();
+            let title = document.getElementById('newLenderTitle').value.trim();
             let plafon = parseInt(document.getElementById('newLenderPlafon').value, 10);
 
-            if (!name || !plafon || plafon <= 0) {
-                alert('Nama dan total plafon harus diisi dengan benar!');
+            if (!name || !title || !plafon || plafon <= 0) {
+                alert('Nama, judul, dan total plafon harus diisi lengkap!');
                 return;
             }
 
@@ -250,6 +265,7 @@
             appData.push({
                 id: newId,
                 name: name,
+                title: title,
                 plafon: plafon,
                 payments: []
             });
@@ -261,11 +277,28 @@
             updateStatsUI();
         }
 
+        function deleteCurrentTab() {
+            if (appData.length <= 1) {
+                alert('Minimal harus ada 1 tab aktif. Tidak dapat menghapus tab terakhir.');
+                return;
+            }
+
+            let lender = getCurrentLender();
+            if (confirm(`Yakin ingin menghapus tab "${lender.name}" beserta seluruh riwayat transaksinya?`)) {
+                appData = appData.filter(l => l.id !== activeLenderId);
+                activeLenderId = appData[0].id;
+                saveAppData();
+                renderTabs();
+                updateStatsUI();
+            }
+        }
+
         function updateStatsUI() {
             let lender = getCurrentLender();
             if (!lender) return;
 
-            document.getElementById('lenderBadge').textContent = 'Pemberi Pembiayaan: ' + lender.name;
+            document.getElementById('lenderBadge').textContent = 'Pemberi / Sumber: ' + lender.name;
+            document.getElementById('tabTitleDisplay').textContent = lender.title;
             document.getElementById('plafonDisplay').textContent = 'Rp ' + lender.plafon.toLocaleString('id-ID');
             document.getElementById('collectedTargetDisplay').textContent = 'Rp ' + lender.plafon.toLocaleString('id-ID');
 
@@ -280,9 +313,19 @@
             let percent = Math.min(Math.round((totalCollected / lender.plafon) * 100), 100);
             document.getElementById('progressBar').style.width = percent + '%';
 
+            // Status Lunas Otomatis
+            const statusBadge = document.getElementById('statusLunasBadge');
+            if (totalCollected >= lender.plafon && lender.plafon > 0) {
+                statusBadge.textContent = 'Status: 🎉 LUNAS';
+                statusBadge.className = 'font-bold text-emerald-400 animate-pulse';
+            } else {
+                statusBadge.textContent = 'Status: Berjalan';
+                statusBadge.className = 'font-bold text-amber-400';
+            }
+
             const container = document.getElementById('paymentListContainer');
             if (lender.payments.length === 0) {
-                container.innerHTML = `<p class="text-xs text-slate-500 text-center py-4">Belum ada riwayat pembayaran tercatat untuk tab ini.</p>`;
+                container.innerHTML = `<p class="text-xs text-slate-500 text-center py-4">Belum ada riwayat tercatat untuk tab ini.</p>`;
                 return;
             }
 
@@ -326,7 +369,7 @@
             const statusDiv = document.getElementById('ocrStatus');
             const submitBtn = document.getElementById('submitBtn');
 
-            const paymentNote = noteInput.value.trim() || `Angsuran ke-${lender.payments.length + 1}`;
+            const paymentNote = noteInput.value.trim() || `Transaksi ke-${lender.payments.length + 1}`;
 
             if (fileInput.files.length === 0) {
                 showModal('Bukti Belum Diunggah', 'Silakan lampirkan screenshot bukti bayar atau transfer Anda.');
@@ -361,7 +404,7 @@
                     return;
                 }
 
-                // Cek Anti Double Upload (Mencegah nominal dan tanggal persis sama di tab aktif)
+                // Pencegahan Double Upload (Mencegah nominal dan tanggal persis sama di tab aktif)
                 let isDuplicate = lender.payments.some(p => p.amount === detectedAmount && p.date === detectedDate);
                 if (isDuplicate) {
                     showModal('Gagal: Double Upload Terdeteksi', `Transaksi dengan nominal <b>Rp ${detectedAmount.toLocaleString('id-ID')}</b> dan tanggal <b>${detectedDate}</b> sudah pernah tercatat di tab ini.`);
