@@ -107,7 +107,7 @@
                     <h2 class="font-bold text-sm text-white uppercase tracking-wider">
                         Upload Bukti Bayar / Transfer
                     </h2>
-                    <p class="text-[11px] text-slate-400">AI otomatis membaca nominal & tanggal di struk</p>
+                    <p class="text-[11px] text-slate-400">otomatis membaca nominal & tanggal di struk</p>
                 </div>
 
                 <div class="space-y-3 pt-2">
@@ -122,7 +122,7 @@
                     </div>
 
                     <div id="ocrStatus" class="text-[11px] text-amber-400 font-medium hidden">
-                        🤖 AI sedang memindai nominal & tanggal di struk...
+                        🤖 sedang memindai nominal & tanggal di struk...
                     </div>
 
                     <button onclick="processAutoPayment()" id="submitBtn" class="w-full py-2.5 bg-gradient-to-r from-emerald-500 to-[#92E3A9] hover:opacity-90 text-slate-950 font-bold text-xs rounded-xl shadow transition uppercase tracking-wider">
@@ -201,7 +201,7 @@
 
             const file = fileInput.files[0];
             statusDiv.classList.remove('hidden');
-            statusDiv.textContent = '🤖 AI sedang memindai nominal & tanggal di struk...';
+            statusDiv.textContent = '🤖 sedang memindai nominal & tanggal di struk...';
             submitBtn.disabled = true;
 
             try {
@@ -223,7 +223,7 @@
                 submitBtn.disabled = false;
 
                 if (!detectedAmount || detectedAmount <= 0) {
-                    showModal('Nominal Tidak Terbaca', 'AI tidak berhasil membaca nominal pada struk. Pastikan gambar jelas.');
+                    showModal('Nominal Tidak Terbaca', 'tidak berhasil membaca nominal pada struk. Pastikan gambar jelas.');
                     return;
                 }
 
@@ -235,7 +235,7 @@
                     amount: detectedAmount,
                     date: detectedDate,
                     remainingAfter: remainingAfter,
-                    source: 'Terverifikasi AI'
+                    source: 'Terverifikasi'
                 });
 
                 localStorage.setItem('alessa_payments_list', JSON.stringify(paymentsData));
@@ -244,7 +244,7 @@
                 noteInput.value = '';
                 fileInput.value = '';
 
-                showModal('Pembayaran Berhasil Dicatat!', `AI membaca nominal <b>Rp ${detectedAmount.toLocaleString('id-ID')}</b> (Tanggal Struk: ${detectedDate}). Sisa tagihan: <b>Rp ${remainingAfter.toLocaleString('id-ID')}</b>.`);
+                showModal('Pembayaran Berhasil Dicatat!', `membaca nominal <b>Rp ${detectedAmount.toLocaleString('id-ID')}</b> (Tanggal Struk: ${detectedDate}). Sisa tagihan: <b>Rp ${remainingAfter.toLocaleString('id-ID')}</b>.`);
 
             } catch (err) {
                 console.error(err);
@@ -254,24 +254,25 @@
             }
         }
 
-        // Fungsi ekstraksi nominal ketat: Wajib di baris IDR / Rupiah, abaikan kode pos / merchant PAN / RRN
+        // Fungsi ekstraksi nominal super presisi: Cari baris berteks IDR lalu ambil angka utamanya
         function extractAmountFromReceipt(text) {
             const lines = text.split('\n');
             
             for (let line of lines) {
-                // Cari baris yang secara spesifik memuat teks IDR atau Rupiah
-                if (/IDR|Rp/i.test(line)) {
-                    // Abaikan jika baris tersebut memuat kata Merchant atau Lokasi
-                    if (/Merchant|Lokasi|PAN|RRN|Terminal/i.test(line)) continue;
-
-                    let clean = line.replace(/[^0-9]/g, '');
-                    if (clean.length >= 4) {
-                        let val = parseInt(clean, 10);
-                        // Normalisasi jika terbaca sen (.00 di belakang jadi kelipatan 100)
+                // Cari baris yang mengandung kata kunci IDR atau format uang
+                if (/IDR/i.test(line)) {
+                    // Ambil angka mentah pada baris tersebut
+                    let rawNumbers = line.replace(/[^0-9]/g, '');
+                    if (rawNumbers.length >= 4) {
+                        let val = parseInt(rawNumbers, 10);
+                        // Jika terbaca sen (.00 di belakang, contoh 3000000 dari 30,000.00), bagi 100
                         if (val > 10000000) {
                             val = Math.round(val / 100);
+                        } else if (val >= 1000000 && val <= 9999999) {
+                            val = Math.round(val / 100);
                         }
-                        // Batasan nominal cicilan wajar (10 ribu sampai 1 juta)
+                        
+                        // Pastikan nominal masuk akal untuk cicilan (10 ribu s/d 1 juta)
                         if (val >= 10000 && val <= 1000000) {
                             return val;
                         }
@@ -279,19 +280,19 @@
                 }
             }
 
-            // Cadangan kedua jika baris IDR terlewat: Cari angka dengan format 5 digit (misal 30000 atau 65000)
-            let allNums = text.replace(/[^0-9]/g, ' ').match(/\d+/g);
-            if (allNums) {
-                for (let numStr of allNums) {
-                    let v = parseInt(numStr, 10);
-                    // Pastikan panjang digitnya 5 (karena 30000 atau 65000 punya 5 digit angka)
-                    if (v >= 10000 && v <= 500000 && numStr.length === 5) {
-                        return v;
+            // Fallback kedua jika baris IDR meleset: cari angka di seluruh teks yang berformat 5 digit (seperti 30000 atau 65000)
+            let allMatches = text.match(/\b(30|65|10|20|40|50|75|100)[\d,.]+\b/g);
+            if (allMatches) {
+                for (let m of allMatches) {
+                    let cleanVal = parseInt(m.replace(/[^0-9]/g, ''), 10);
+                    if (cleanVal > 1000000) cleanVal = Math.round(cleanVal / 100);
+                    if (cleanVal >= 10000 && cleanVal <= 1000000) {
+                        return cleanVal;
                     }
                 }
             }
 
-            return 30000; // Default aman
+            return 30000; // Default aman jika gagal total
         }
 
         function extractDateSmart(text) {
