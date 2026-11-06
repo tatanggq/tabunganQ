@@ -646,13 +646,17 @@
         }
 
         function extractDateSmart(text) {
-            const dateRegex = /\b(\d{1,2}\s+[A-Za-z]{3,}\s+\d{4}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})\b/;
+            // Deteksi pola tanggal pada struk (cth: 05 Nov 2026, 05/11/2026, 2026-11-05)
+            const dateRegex = /\b(\d{1,2}[\/\-\s](?:Jan|Feb|Mar|Apr|Mei|Jun|Jul|Agu|Sep|Okt|Nov|Des|[A-Za-z]{3})[\/\-\s]\d{2,4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})\b/i;
             const match = text.match(dateRegex);
+            
             if (match) {
-                return match[0];
+                return match[0]; // Mengembalikan tanggal yang sukses terbaca dari struk
             }
+            
+            // Jika tanggal di struk tidak tertulis atau gagal terbaca OCR, gunakan tanggal hari ini
             const now = new Date();
-            return now.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) + ' ' + now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+            return now.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
         }
 
         function showModal(title, message) {
