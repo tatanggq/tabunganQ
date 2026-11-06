@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Keuangan & Angsuran</title>
+    <!-- PWA Manifest & Theme Color -->
+    <meta name="theme-color" content="#0f172a">
+    <link rel="manifest" id="pwa-manifest">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Tesseract.js for Free Client-Side OCR (AI Receipt Scanning) -->
@@ -235,6 +238,33 @@
     </footer>
 
     <script>
+        // Generate PWA Manifest Dynamically via Data URI to trigger install prompt
+        const manifestData = {
+            "name": "Manajemen Keuangan & Angsuran",
+            "short_name": "KeuanganApp",
+            "start_url": window.location.href,
+            "display": "standalone",
+            "background_color": "#0f172a",
+            "theme_color": "#0f172a",
+            "icons": [
+                {
+                    "src": "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+                    "sizes": "512x512",
+                    "type": "image/png"
+                }
+            ]
+        };
+        const stringManifest = JSON.stringify(manifestData);
+        const blob = new Blob([stringManifest], {type: 'application/json'});
+        document.getElementById('pwa-manifest').setAttribute('href', URL.createObjectURL(blob));
+
+        // Register Service Worker for PWA eligibility
+        if ('serviceWorker' in navigator) {
+            const swCode = `self.addEventListener('fetch', (e) => { e.respondWith(fetch(e.request).catch(() => caches.match(e.request))); });`;
+            const swBlob = new Blob([swCode], {type: 'text/javascript'});
+            navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(err => console.log('SW error', err));
+        }
+
         // Logika PWA Install Prompt
         let deferredPrompt;
         const installBtn = document.getElementById('installAppBtn');
